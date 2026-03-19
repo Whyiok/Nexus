@@ -63,29 +63,31 @@
             </div> -->
             <div class="main-page-content">
                 <div class="d-flex flex-column">
-                    <h3 class="mt-4 font">Приветствуем вас на Nexus MC!</h3><img src="/static/Crying_Obsidian.png" height="150" width="150" style="transform: rotate(5deg); position: absolute; bottom: 30rem; right: 30rem;">
-                        <span class="font-mine mt-2">Nexus MC - это место, на котором игроки Minecraft деляться своими мыслями и творениями!<br>
-                            Вы можете обсудить с другими пользователями различные темы, добавлять посты, или просто общаться.</span>
+                    <h3 class="mt-4 font">Приветствуем вас на Nexus MC!</h3>
+                    <span class="font-mine mt-2">Nexus MC - это место, на котором игроки Minecraft деляться своими
+                        мыслями и творениями!<br>
+                        Вы можете обсудить с другими пользователями различные темы, добавлять посты, или просто
+                        общаться.</span>
                     <h3 class="mt-4 font">Популярные посты:</h3>
                     <div>
                         {% if posts|length > 0 %}
                         {% for post in posts %}
-                        <div class="discuss-custom">
+                        <div class="post m-2">
                             <!-- Картинка -->
                             {% if post.image_name %}
                             <a href="/post/{{ post.id }}" class="text-decoration-none">
                                 <div style="width: 5rem; height: 5rem;">
                                     <img src="{{ url_for('static', filename='uploads/' ~ post.image_name) }}"
                                         alt="Post image"
-                                        style="width: 5rem; height: 5rem; object-fit: cover; object-position: left;">
+                                        style="width: 100%; height: 200px; object-fit: cover; object-position: center;">
                                 </div>
                             </a>
                             {% else %}
                             <!-- Серое заполнение, если нет картинки -->
                             <a href="/post/{{ post.id }}" class="text-decoration-none">
                                 <div style="
-                width: 5rem;
-                height: 5rem;
+                width: 100%;
+                height: 200px;
                 background: linear-gradient(135deg, #2a2a3a 0%, #1a1a2a 100%);
                 display: flex;
                 align-items: center;
@@ -105,27 +107,21 @@
                             {% endif %}
 
                             <!-- Контент -->
-
                             <div style="padding: 15px; flex: 1; display: flex; flex-direction: column;">
-                                <a style="color: white; margin: 0 0 0 0;" class="fw-bold text-decoration-none fs-5"
-                                    href="/post/{{ post.id }}">{{ post.title }}</a>
+                                <a style="color: white; margin: 0 0 10px 0; font-family: 'Unbounded', sans-serif;"
+                                    class="fw-bold text-decoration-none fs-5 text-start" href="/post/{{ post.id }}">{{
+                                    post.title }}</a>
+                                <a class="m-0 link-custom text-secondary font-small font-mine text-start" onclick="playSound()"
+                                    href="/user/{{ post.author.id }}">
+                                    <img src="/static/avatars/{{ post.author.avatar }}"
+                                        style="border-radius: 50%; height: 15px; margin-bottom: 0;">
+                                    {{ post.author.username }} • {{ time_ago(post.date) }}</a>
 
-                                <div class="d-flex gap-3 mt-0">
-                                    <p class="text-secondary mb-0" onclick="playSound()">{{ post.date }}</p>
-                                    <a class="mb-0 link-body-emphasis" onclick="playSound()"
-                                        href="/user/{{ author.id }}">
-                                        <img src="/static/avatars/{{ author.avatar }}"
-                                            style="border-radius: 50%; height: 20px; margin-bottom: 0;">
-                                        {{ author.username }}</a>
-                                    {% if current_user.username == 'Whyiok' %}
-                                    <form method="post" action="/delete_post/{{ post.id }}">
-                                        <button type="submit" class="btn btn-unstyled text-decoration-none">×</button>
-                                    </form>
-                                    {% endif %}
-                                    <p title="Просмотры"><img src="/static/view.svg" class="me-1" height="20">{{
-                                        post.views }}</p>
-                                    <p title="Ответы"><img src="/static/comment.svg" class="me-1" height="20">{{
-                                        comments_len }}</p>
+                                <div class="d-flex flex-row gap-3 mt-auto bg-purple rounded-pill align-items-center p-2">
+                                    <span title="Просмотры"><img src="/static/view.svg" class="me-1 ms-2" height="20">{{
+                                        post.views }}</span>
+                                    <span title="Ответы"><img src="/static/comment.svg" class="me-1" height="20">{{
+                                        comments_len }}</span>
                                 </div>
                             </div>
                         </div>

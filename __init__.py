@@ -202,14 +202,13 @@ class Posts(db.Model):  # Посты
     text = db.Column(db.Text)
     rating = db.Column(db.Integer, default=0)
     views = db.Column(db.Integer, default=0)
-    comments = db.Column(db.Integer, default=0)
     categories = db.Column(db.JSON, default=[])
     image_name = db.Column(db.String)
     date = db.Column(db.DateTime, default=datetime.utcnow)
     is_news = db.Column(db.Boolean, default=False)
     official = db.Column(db.Boolean, default=False)
 
-    def __init__(self, id_author, title, text, views, categories, image_name, official=None, is_news=None):
+    def __init__(self, id_author, title, text, views, comments, image_name, official=None, is_news=None):
         self.id_author = id_author
         self.title = title
         self.text = text
@@ -385,8 +384,10 @@ def index():
     posts = Posts.query.order_by(Posts.views.desc()).all()
     if posts:
         for post in posts:
-            author = post.id_author
-    return render_template("index.html", posts=posts, author=author)
+            comment = Comments.query.filter_by(id_post=post.id).all()
+            post.author = post.id_author
+            comments_len = len(comment)
+    return render_template("index.html", posts=posts, comments_len=comments_len)
 
 
 @app.route('/news_nexus')
@@ -781,6 +782,57 @@ def discuss(id):
         db.session.commit()
 
     return render_template("discuss.html", discuss=discuss, liked=liked, disliked=disliked, user_a=user_a, comments=comments)
+
+@app.route('/post/<int:id>', methods=['GET', 'POST'])
+def post(id):
+    post = db.session.get(Posts, id)
+    comments = Comments.query.filter_by(id_post=id).all()
+
+    if comments:
+        for comment in comments:
+            comment.author = User.query.get(comment.id_author)
+    user_a = db.session.get(User, post.id_author)
+    liked = False
+    disliked = False
+
+    if not post:
+        return redirect(url_for('index'))
+
+    if current_user.is_authenticated:
+        viewer_id = current_user.id
+
+        view = Views.query.filter_by(
+            post_id=id,
+            user_id=viewer_id
+        ).first()
+
+        liked = Likes.query.filter_by(
+            id_author=current_user.id,
+            id_post=id
+        ).first() is not None
+        disliked = Dislikes.query.filter_by(
+            id_author=current_user.id,
+            id_post=id
+        ).first() is not None
+    else:
+        if 'session_id' not in session:
+            session['session_id'] = str(uuid.uuid4())
+        viewer_id = session['session_id']
+        view = Views.query.filter_by(
+            post_id=id,
+            user_id=viewer_id
+        ).first()
+    if not view:
+        new_view = Views(
+            post_id=id,
+            user_id=current_user.id if current_user.is_authenticated else None,
+            session_id=None if current_user.is_authenticated else viewer_id
+        )
+        db.session.add(new_view)
+        post.views += 1
+        db.session.commit()
+
+    return render_template("post.html", post=post, liked=liked, disliked=disliked, user_a=user_a, comments=comments)
 
 
 @app.route('/delete_post/<int:id>', methods=['GET', 'POST'])
