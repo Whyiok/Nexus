@@ -1,0 +1,147 @@
+{% extends 'base.html' %}
+
+{% block title %}
+Главная
+{% endblock %}
+
+{% block header %}
+{% endblock %}
+
+{% block menu %}
+{% endblock %}
+
+{% block main %}
+<main>
+    <div class="container" style="margin-top: 10rem;">
+        <!-- Hero секция -->
+        <audio id="clickSound" style="display: none;" preload="auto">
+            <source src="/static/click.mp3" type="audio/mpeg">
+        </audio>
+
+        <script>
+            function playSound() {
+                const sound = document.getElementById('clickSound');
+                if (sound) {
+                    sound.volume = 1;
+                    sound.currentTime = 0;
+                    sound.play().catch(error => {
+                        console.log("Звук не воспроизведен:", error);
+                    });
+                }
+            }
+        </script>
+        <div class="px-4 text-center">
+            <!--
+            <div id="carouselExample" class="carousel slide m-3 d-flex justify-content-center" style="width: 50rem;">
+                <div class="carousel-inner">
+                    <div class="carousel-item active" style="width: 50rem; height: 30rem;">
+                        <img src="/static/uploads/i-think-the-end-dimension-should-have-some-stars-in-the-sky-v0-39xwehrr8s3f1.webp"
+                            class="d-block w-100" style="border-radius: 15px;">
+                        <div class="div-glass position-absolute bottom-0 d-flex flex-column">
+                            <a href="/forum" class="font text-light">Теория о энде</a>
+                            <p class="font text-light">Популярный пост</p>
+                        </div>
+                    </div>
+                    <div class="carousel-item" style="width: 50rem; height: 30rem;">
+                        <img src="/static/uploads/14784448-purebdcraft-planetminecraft.jpg" class="d-block w-100"
+                            style="border-radius: 15px;">
+                    </div>
+                    <div class="carousel-item" style="width: 50rem; height: 30rem;">
+                        <img src="/static/uploads/pixil-frame-0.png" class="d-block w-100" style="border-radius: 15px;">
+                    </div>
+                </div>
+                <button class="carousel-control-prev" type="button" data-bs-target="#carouselExample"
+                    data-bs-slide="prev">
+                    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                    <span class="visually-hidden">Предыдущий</span>
+                </button>
+                <button class="carousel-control-next" type="button" data-bs-target="#carouselExample"
+                    data-bs-slide="next">
+                    <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                    <span class="visually-hidden">Следующий</span>
+                </button>
+            </div> -->
+            <div class="main-page-content">
+                <div class="d-flex flex-column">
+                    <h3 class="mt-4 font">Приветствуем вас на Nexus MC!</h3><img src="/static/Crying_Obsidian.png" height="150" width="150" style="transform: rotate(5deg); position: absolute; bottom: 30rem; right: 30rem;">
+                        <span class="font-mine mt-2">Nexus MC - это место, на котором игроки Minecraft деляться своими мыслями и творениями!<br>
+                            Вы можете обсудить с другими пользователями различные темы, добавлять посты, или просто общаться.</span>
+                    <h3 class="mt-4 font">Популярные посты:</h3>
+                    <div>
+                        {% if posts|length > 0 %}
+                        {% for post in posts %}
+                        <div class="discuss-custom">
+                            <!-- Картинка -->
+                            {% if post.image_name %}
+                            <a href="/post/{{ post.id }}" class="text-decoration-none">
+                                <div style="width: 5rem; height: 5rem;">
+                                    <img src="{{ url_for('static', filename='uploads/' ~ post.image_name) }}"
+                                        alt="Post image"
+                                        style="width: 5rem; height: 5rem; object-fit: cover; object-position: left;">
+                                </div>
+                            </a>
+                            {% else %}
+                            <!-- Серое заполнение, если нет картинки -->
+                            <a href="/post/{{ post.id }}" class="text-decoration-none">
+                                <div style="
+                width: 5rem;
+                height: 5rem;
+                background: linear-gradient(135deg, #2a2a3a 0%, #1a1a2a 100%);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                border-bottom: 1px solid rgba(111, 66, 193, 0.3);
+            ">
+                                    <span style="
+                    color: rgba(255,255,255,0.3);
+                    font-size: 1rem;
+                    font-family: 'Unbounded', sans-serif;
+                    opacity: 0.5;
+                    user-select: none;
+                    margin-left: 0.6rem;
+                ">NO IMAGE</span>
+                                </div>
+                            </a>
+                            {% endif %}
+
+                            <!-- Контент -->
+
+                            <div style="padding: 15px; flex: 1; display: flex; flex-direction: column;">
+                                <a style="color: white; margin: 0 0 0 0;" class="fw-bold text-decoration-none fs-5"
+                                    href="/post/{{ post.id }}">{{ post.title }}</a>
+
+                                <div class="d-flex gap-3 mt-0">
+                                    <p class="text-secondary mb-0" onclick="playSound()">{{ post.date }}</p>
+                                    <a class="mb-0 link-body-emphasis" onclick="playSound()"
+                                        href="/user/{{ post.author.id }}">
+                                        <img src="/static/avatars/{{ post.author.avatar }}"
+                                            style="border-radius: 50%; height: 20px; margin-bottom: 0;">
+                                        {{ post.author.username }}</a>
+                                    {% if current_user.username == 'Whyiok' %}
+                                    <form method="post" action="/delete_post/{{ post.id }}">
+                                        <button type="submit" class="btn btn-unstyled text-decoration-none">×</button>
+                                    </form>
+                                    {% endif %}
+                                    <p title="Просмотры"><img src="/static/view.svg" class="me-1" height="20">{{
+                                        post.views }}</p>
+                                    <p title="Ответы"><img src="/static/comment.svg" class="me-1" height="20">{{
+                                        comments_len }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                        {% else %}
+                        <div class="nav col-auto mb-2 justify-content-center mb-md-0 p-2" style="margin-top: 80px;">
+                            <p class="display-5 fw-bold"
+                                style="background: linear-gradient(45deg, #6f42c1, #a855f7, #d946ef); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-size: 4rem; user-select: none;">
+                                У нас пока нету постов :(</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    </div>
+</main>
+{% endblock %}
