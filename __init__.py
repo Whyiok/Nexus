@@ -1,5 +1,5 @@
 import base64
-from flask import Flask, render_template, request, redirect, session, url_for, flash, session
+from flask import Flask, render_template, request, redirect, session, url_for, flash, session, Blueprint, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from datetime import date, timedelta, datetime
 from flask_login import UserMixin, LoginManager, login_user, login_required, logout_user, current_user
@@ -202,18 +202,18 @@ class Posts(db.Model):  # Посты
     text = db.Column(db.Text)
     rating = db.Column(db.Integer, default=0)
     views = db.Column(db.Integer, default=0)
-    categories = db.Column(db.JSON, default=[])
+    type = db.Column(db.JSON, default=[])
     image_name = db.Column(db.String)
     date = db.Column(db.DateTime, default=datetime.utcnow)
     is_news = db.Column(db.Boolean, default=False)
     official = db.Column(db.Boolean, default=False)
 
-    def __init__(self, id_author, title, text, views, comments, image_name, official=None, is_news=None):
+    def __init__(self, id_author, title, text, views, type, image_name, official=None, is_news=None):
         self.id_author = id_author
         self.title = title
         self.text = text
         self.views = views
-        self.categories = categories
+        self.type = type
         self.image_name = image_name
         self.is_news = is_news or False
         self.official = official or False
@@ -382,6 +382,7 @@ def inject_user():
 @app.route('/')
 def index():
     posts = Posts.query.order_by(Posts.views.desc()).all()
+    comments_len = 0
     if posts:
         for post in posts:
             comment = Comments.query.filter_by(id_post=post.id).all()
@@ -640,7 +641,7 @@ def add_post(post_type):
             text = request.form.get('text')
             id_author = current_user.id
             views = 0
-            categories = request.form.getlist('categories')
+            type = request.form.getlist('type')
 
             if title == '' or text == '':
                 flash("Недопустимый запрос.", 'danger')
@@ -677,7 +678,7 @@ def add_post(post_type):
                             image_data = None
 
                         db.session.add(Posts(id_author=id_author, title=title, text=text,
-                                       views=views, categories=categories, image_name=file.filename))
+                                       views=views, type=type, image_name=file.filename))
                         db.session.commit()
                         flash("Пост успешно добавлен!", 'success')
                         return redirect(url_for('forum'))
@@ -1033,9 +1034,103 @@ def unban_user(id):
     db.session.commit()
     return redirect(url_for('user', id=id))
 
+def init_api(app, db, Post, User) -> None:
+    """
+    Подключает API в существующее Flask-приложение.
+    """
+
+    api_bp = Blueprint("api", __name__, url_prefix="/api")
+
+    def _json_error(message: str, status: int = 400):
+        return jsonify({"ok": False, "error": message}), status
+
+    def _post_to_dict(post) -> dict[str, Any]:
+        return {
+            "id": post.id,
+            "title": post.title,
+            "text": post.text,
+            "views": post.views,
+            "date": post.date
+        }
+
+    @api_bp.get("/posts")
+    def list_posts():
+        posts = Post.query.order_by(Post.views.desc()).all()
+        return jsonify({"ok": True, "items": [_post_to_dict(p) for p in posts]})
+
+    @api_bp.get("/posts/<int:post_id>")
+    def get_posts(post_id: int):
+        post = db.session.get(Post, post_id)
+        if post is None:
+            return _json_error("Post not found", 404)
+        return jsonify({"ok": True, "item": _post_to_dict(post)})
+
+    @api_bp.post("/auth/login")
+    def login():
+        payload = request.get_json(silent=True) or {}
+        username = payload.get("username")
+        password = payload.get("password")
+
+        if not username or not password:
+            return _json_error("username and password are required", 400)
+
+        user = User.query.filter_by(username=username).first()
+        if user is None:
+            return _json_error("User not found", 404)
+        if not check_password_hash(user.hash_password, password):
+            return _json_error("Invalid credentials", 401)
+
+        login_user(user)
+        return jsonify({"ok": True, "message": "Login successful"})
+
+    def _require_admin():
+        if not current_user.is_authenticated:
+            return _json_error("Authentication required", 401)
+        if not getattr(current_user, "admin", False):
+            return _json_error("Admin privileges required", 403)
+        return None
+
+    @api_bp.post("/posts")
+    def create_post():
+        err = _require_admin()
+        if err is not None:
+            return err
+
+        payload = request.get_json(silent=True) or {}
+        title = payload.get("title")
+        text = payload.get("text")
+
+        if not title or not text:
+            return _json_error("title and text are required", 400)
+
+        post = Post(id_author=current_user.id, title=title, text=text, categories=[], image_name=None)
+        db.session.add(post)
+        db.session.commit()
+        return jsonify({"ok": True, "item": _post_to_dict(post)}), 201
+
+    @api_bp.delete("/posts/<int:post_id>")
+    def delete_post(post_id: int):
+        err = _require_admin()
+        if err is not None:
+            return err
+
+        post = db.session.get(Post, post_id)
+        if post is None:
+            return _json_error("Post not found", 404)
+
+        db.session.delete(post)
+        db.session.commit()
+        return jsonify({"ok": True, "message": "Deleted"})
+
+    # Регистрируем blueprint в приложение
+    app.register_blueprint(api_bp)
+    csrf.exempt(api_bp)
+
 
 with app.app_context():
     db.create_all()
+
+init_api(app, db, Posts, User)
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', debug=True, port=5000)
