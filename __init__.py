@@ -260,11 +260,13 @@ def allowed_file(filename):
 def notifications():
     user = current_user
     id = user.id
-    notice_author = ''
     notifications = Notification.query.filter_by(user_id=id).limit(3).all()
-    for notification in notifications:
-        notice_author = notification.from_user_id
-    return render_template('notifications.html', notifications=notifications, notice_author=notice_author)
+    if notifications:
+        notice_author = ''
+        for notification in notifications:
+            notice_author = notification.from_user_id
+        return render_template('notifications.html', notifications=notifications, notice_author=notice_author)
+    return render_template('index.html')
 
 
 @app.route('/mark_notice', methods=['POST'])
@@ -692,7 +694,7 @@ def add_post(post_type):
                                        views=views, type=post_type, image_name=file.filename))
                         db.session.commit()
                         flash("Пост успешно добавлен!", 'success')
-                        return redirect(url_for('forum'))
+                        return redirect(url_for('index'))
 
                     except Exception as e:
                         print(f"Не удалось добавить пост! Ошибка: {e}")
@@ -951,7 +953,7 @@ def report(id):
         if post:
             for moderator in moderators:
                 new_notice = Notification(user_id=moderator.id, from_user_id=current_user.id,
-                                          post_id=post.id, type="отправил жалобу на пост!", message="")
+                                          post_id=post.id, message="отправил жалобу на пост!", type=5)
                 db.session.add(new_notice)
             db.session.commit()
             flash('Спасибо за помощь!', 'success')
@@ -960,7 +962,7 @@ def report(id):
         elif discuss:
             for moderator in moderators:
                 new_notice = Notification(user_id=moderator.id, from_user_id=current_user.id,
-                                          discuss_id=discuss.id, type="отправил жалобу на ветку!", message="")
+                                          discuss_id=discuss.id, message="отправил жалобу на ветку!", type=5)
                 db.session.add(new_notice)
             db.session.commit()
             flash('Спасибо за помощь!', 'success')

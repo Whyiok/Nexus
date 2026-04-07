@@ -38,13 +38,11 @@
     class="mt-5">
     {% if notifications|length > 0 %}
     {% for notification in notifications %}
-    <!-- Карточка без Bootstrap классов -->
     <div class="discuss-custom">
-
       <!-- Контент -->
       <div style="padding: 15px; flex: 1; display: flex; flex-direction: column;">
         <a style="color: white; margin: 0 0 0 0;" class="fw-bold text-decoration-none fs-5"
-          href="/post/{{ notification.post_id }}">{{ notification.type }}</a>
+          href="/post/{{ notification.post_id }}">{{ notice_author.username }}{{ notification.message }}</a>
 
         <div class="d-flex gap-3 mt-0">
           <p class="text-secondary mb-0" onclick="playSound()">{{ notification.date }}</p>

@@ -6,6 +6,38 @@
 
 {% block main %}
 <main style="min-height: 100vh; display: flex; align-items: center; padding: 100px 0; margin-top: 1rem;">
+    <div class="modal fade" id="reportBackdrop" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1"
+        aria-labelledby="staticBackdropLabel" aria-hidden="true" {% if show_modal %} data-bs-show="true" {% endif %}>
+        <div class="modal-dialog">
+            <div class="modal-content" style="border-radius: 15px; background: rgba(10, 10, 20, 0.75);">
+                <div class="modal-header">
+                    <h1 class="modal-title fs-5 font" id="staticBackdropLabel">Отправка жалобы</h1>
+                </div>
+                <form method="post" action="/report/{{ post.id }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="modal-body">
+                        <p class="font">Причина</p>
+                        <div style="margin-bottom: 20px;">
+                            <select class="form-select font-mine">
+                                <option selected value="indecent" class="font-mine">Неприличный пост</option>
+                                <option value="spam" class="font-mine">Спам или реклама</option>
+                                <option value="conf_info" class="font-mine">Конфиденциальная информация</option>
+                                <option value="offtopic" class="font-mine">Не по теме</option>
+                                <option value="agry" class="font-mine">Оскорбления</option>
+                                <option value="other" class="font-mine">Другое</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn-glass btn-glass-outline font" data-bs-dismiss="modal">
+                            Отменить
+                        </button>
+                        <button type="submit" class="btn-glass btn-glass-primary font">Отправить</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
     <div class="modal fade" id="deleteBackdrop" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1"
         aria-labelledby="staticBackdropLabel" aria-hidden="true" {% if show_modal %} data-bs-show="true" {% endif %}>
         <div class="modal-dialog">
@@ -83,7 +115,7 @@
                                     </button>
                                 </form>
                                 <a class="btn-unstyled text-secondary text-decoration-none button-custom px-2 font-mine report-button"
-                                    data-bs-toggle="modal" data-bs-target="#staticBackdrop">
+                                    data-bs-toggle="modal" data-bs-target="#reportBackdrop">
                                     <img src="/static/report.svg" class="report-icon">
                                     <span class="mt-2 text-reset font-mine">Жалоба</span>
                                 </a>

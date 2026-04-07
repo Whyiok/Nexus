@@ -27,13 +27,17 @@
                             3. Вставки ссылок на другие ресурсы с целью рекламы запрещены.">
         </a>
     </div>
-    <!-- Форма загрузки -->
+
     <div class="mb-5 fixed" style="
         display: flex;
         flex-direction: column;
         align-items: center;
         padding-top: 15px;
     ">
+    <h1 class="font">{%if post_type=='article'%}Добавление статьи
+                    {%elif post_type=='server_java'%}Добавление Java сервера
+                    {%elif post_type=='server_bedrock'%}Добавление Bedrock сервера
+                    {%elif post_type=='texture_pack'%}Добавление текстур пака{%endif%}</h1>
         <form method="POST" enctype="multipart/form-data">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="m-3 w-25 col-auto">
