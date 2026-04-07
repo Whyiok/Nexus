@@ -4,15 +4,15 @@ document.addEventListener('DOMContentLoaded', function () {
         form.addEventListener('submit', async (event) => {
             event.preventDefault();
             const postId = form.dataset.id;
+            const contentType = form.dataset.type;
             const csrfToken = form.querySelector('input[name="csrf_token"]').value;
             try {
-                const response = await fetch(`/like/${postId}`, {
+                const response = await fetch(`/like/${contentType}/${postId}`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'X-CSRFToken': csrfToken
-                    },
-                    body: JSON.stringify({ discuss_id: postId })
+                    }
                 });
                 const data = await response.json();
                 const likeIcon = document.getElementById(`like-icon-${postId}`); 
@@ -31,7 +31,6 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
     });
-
 
     // Popovers
     const popoverTriggerList = document.querySelectorAll('[data-bs-toggle="popover"]');
@@ -83,7 +82,6 @@ document.addEventListener('DOMContentLoaded', function () {
     if (notificationDropdown) {
         notificationDropdown.addEventListener('shown.bs.dropdown', async function () {
             try {
-                // Получаем CSRF токен из мета-тега или cookie
                 const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
 
                 const response = await fetch('/mark_notice', {
@@ -102,11 +100,15 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 if (data.success) {
                     console.log('Уведомления отмечены как прочитанные');
-
-                    // Убираем бейдж с количеством уведомлений
-                    const badge = notificationDropdown.querySelector('.badge');
+                    
+                    // Ищем badge в родительском элементе
+                    const badge = notificationDropdown.parentElement.querySelector('.badge');
                     if (badge) {
+                        console.log("Бейдж найден");
                         badge.remove();
+                        console.log("Бейдж удален");
+                    } else {
+                        console.log("Бейдж не найден");
                     }
                 } else {
                     console.error('Ошибка:', data.message);
@@ -115,7 +117,72 @@ document.addEventListener('DOMContentLoaded', function () {
                 console.error('Ошибка при отправке запроса:', error);
             }
         });
-    } else {
-        console.log('notificationDropdown не найден');
     }
+
+    // Ripple effect функция
+    function addRippleEffect(selector) {
+        const elements = document.querySelectorAll(selector);
+        
+        elements.forEach(element => {
+            element.addEventListener('click', function (e) {
+                // Удаляем старый круг, если есть
+                const oldRipple = element.querySelector('.ripple');
+                if (oldRipple) oldRipple.remove();
+
+                const circle = document.createElement('span');
+                const diameter = Math.max(element.clientWidth, element.clientHeight);
+                const radius = diameter / 2;
+
+                // Расчет координат клика относительно элемента
+                const rect = element.getBoundingClientRect();
+                circle.style.width = circle.style.height = `${diameter}px`;
+                circle.style.left = `${e.clientX - rect.left - radius}px`;
+                circle.style.top = `${e.clientY - rect.top - radius}px`;
+                circle.classList.add('ripple');
+
+                element.appendChild(circle);
+
+                // Удаляем элемент после анимации
+                setTimeout(() => {
+                    if (circle.parentNode) {
+                        circle.remove();
+                    }
+                }, 600);
+            });
+        });
+    }
+
+    // Применяем эффект к разным типам элементов
+    addRippleEffect('.btn-glass-outline');
+    addRippleEffect('.btn-glass-primary');
+    addRippleEffect('.btn-glass');
+    addRippleEffect('.post');
+    addRippleEffect('.discuss-custom');
+    addRippleEffect('.link-custom');
+    
+    // Эффект нажатия для кнопок
+    function addPressEffect(selector) {
+        const elements = document.querySelectorAll(selector);
+        
+        elements.forEach(element => {
+            element.addEventListener('mousedown', function() {
+                this.style.transform = 'scale(0.99)';
+            });
+            
+            element.addEventListener('mouseup', function() {
+                this.style.transform = '';
+            });
+            
+            element.addEventListener('mouseleave', function() {
+                this.style.transform = '';
+            });
+        });
+    }
+    
+    // Применяем эффект нажатия
+    addPressEffect('.btn-glass');
+    addPressEffect('.btn-glass-primary');
+    addPressEffect('.btn-glass-outline');
+    
+    console.log('Ripple effect initialized');
 });

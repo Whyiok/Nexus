@@ -65,8 +65,11 @@ hr {
 
 .main-page-content {
     border-radius: 15px;
-    min-height: 25rem;
-    background: rgba(15, 15, 30, 1);
+    background: rgb(15, 15, 30);
+    max-width: 1400px;
+    margin: 0 auto;
+    width: 1400px;
+    padding: 2rem;
 }
 
 .card-lol {
@@ -164,41 +167,65 @@ hr {
     min-width: 25rem;
     background: rgba(10, 10, 20, 0.9);
     backdrop-filter: blur(10px);
-    border: 2px solid rgba(111, 66, 193, 0.3);
+    border: 1px solid rgba(111, 66, 193, 0.3);
     border-radius: 15px;
     overflow: hidden;
     margin: 0;
     padding: 0;
     transition: 0.3s all;
+    position: relative;
 }
 
 .discuss-custom:hover {
     transform: scale(1.01);
     box-shadow: 5px 5px 10px rgba(0, 0, 0, 0.5);
     background: rgba(111, 66, 193, 0.500);
-    border: 2px solid rgba(111, 66, 193, 1);
+    border: 1px solid rgba(111, 66, 193, 1);
 }
 
 .post {
-    height: 30rem;
-    width: 30rem;
+    height: 25rem;
     display: flex;
     flex-direction: column;
     background: rgba(10, 10, 20, 0.9);
-    backdrop-filter: blur(10px);
-    border: 2px solid rgba(111, 66, 193, 0.3);
     border-radius: 15px;
     overflow: hidden;
+    border: 1px solid transparent;
     margin: 0;
     padding: 0;
     transition: 0.3s all;
+    min-height: 25rem;
+    max-width: 25rem;
 }
 
 .post:hover {
     transform: scale(1.01);
     box-shadow: 5px 5px 10px rgba(0, 0, 0, 0.5);
-    background: rgba(111, 66, 193, 0.500);
-    border: 2px solid rgba(111, 66, 193, 1);
+    background: rgba(111, 66, 193, 0.5);
+    border: 1px solid rgba(111, 66, 193, 1);
+}
+
+.ex-post {
+    height: 25rem;
+    display: flex;
+    flex-direction: column;
+    background: rgba(10, 10, 20, 0.9);
+    backdrop-filter: blur(10px);
+    border-radius: 15px;
+    overflow: hidden;
+    border: 1px solid transparent;
+    margin: 0;
+    padding: 0;
+    transition: 0.3s all;
+    min-height: 25rem;
+    max-width: 25rem;
+}
+
+.ex-post:hover {
+    transform: scale(1.01);
+    box-shadow: 5px 5px 10px rgba(0, 0, 0, 0.5);
+    background: rgba(255, 215, 0, 0.5);
+    border: 1px solid rgba(255, 215, 0, 0.5);
 }
 
 /*.discuss-custom:active {
@@ -247,6 +274,7 @@ li:hover {
 
 .input {
     background: transparent;
+    width: 100%;
     border: none;
     color: white;
     padding: 0px 0;
@@ -383,6 +411,17 @@ select:focus {
     background: linear-gradient(45deg, #6f42c1, #a855f7, #d946ef);
 }
 
+.bg-golden {
+    background: linear-gradient(45deg, #FF8C00, #FFA500, #FFD700);
+}
+
+.text-golden {
+    background: linear-gradient(90deg, #FF8C00, #FFA500, #FFD700);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
 .nav-link-glass:hover .nav-indicator {
     width: 80%;
 }
@@ -431,7 +470,6 @@ select:focus {
     color: rgba(255, 255, 255, 0.4);
 }
 
-/* Кнопки Glass */
 .btn-glass {
     padding: 0.6rem 1.5rem;
     border-radius: 15px;
@@ -495,7 +533,10 @@ select:focus {
     border: 1px solid rgba(255, 255, 255, 0.1);
     box-shadow: 0 10px 15px rgba(0, 0, 0, 0.5);
     backdrop-filter: blur(5px);
+    overflow: hidden;
+    position: relative;
 }
+
 
 .btn-glass-outline:hover {
     transform: translateY(-2px);
@@ -503,6 +544,30 @@ select:focus {
 
 .btn-check:checked+.btn-glass-outline {
     background: rgba(255, 255, 255, 0.1);
+}
+
+.ripple {
+    pointer-events: none;
+    position: absolute;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    transform: scale(0);
+    animation: ripple-effect 0.6s ease-out;
+    z-index: 1;
+}
+
+@keyframes ripple-effect {
+    0% {
+        transform: scale(0);
+        opacity: 1;
+        filter: blur(5px);
+    }
+
+    100% {
+        transform: scale(4);
+        opacity: 0;
+        filter: blur(5px);
+    }
 }
 
 .input {
@@ -531,27 +596,20 @@ select:focus {
     border: 1px solid rgba(255, 255, 255, 0.1);
     backdrop-filter: blur(5px);
     box-shadow: 0 5px 15px rgba(111, 66, 193, 0.8);
+    position: relative;
+    overflow: hidden;
+    transition: 0.3s all;
 }
 
 .btn-glass-primary:hover {
     border: 1px solid rgba(255, 255, 255, 0);
     background: linear-gradient(90deg, #6f42c1, #a855f7, #d946ef);
-    ;
     transform: translateY(-2px);
     box-shadow: 0 10px 15px rgba(111, 66, 193, 0.8);
 }
 
 .btn-check:checked+.btn-glass-primary {
     background: linear-gradient(90deg, #6f42c1, #a855f7, #d946ef);
-}
-
-
-.div-glass-primary {
-    background: linear-gradient(45deg, #6f42c1, #a855f7, #d946ef);
-    color: white;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(5px);
-    box-shadow: 0 5px 15px rgba(111, 66, 193, 0.8);
 }
 
 .btn-glass-red {

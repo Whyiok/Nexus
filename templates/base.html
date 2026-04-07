@@ -32,7 +32,9 @@
                         data-bs-dismiss="modal" type="button" class="btn-unstyled">✕</button>
                 </div>
                 <div class="d-flex flex-column gap-1 m-1">
-                    <a class="btn-glass btn-glass-outline font"><img src="/static/serverjava.svg">Java сервер</a>
+                    <a class="btn-glass btn-glass-outline font"
+                        href="{{ url_for('add_post', post_type='server_java') }}"><img src="/static/serverjava.svg">Java
+                        сервер</a>
                     <a class="btn-glass btn-glass-outline font"><img src="/static/serverbedrock.svg ">Bedrock сервер</a>
                     <a class="btn-glass btn-glass-outline font"><img src="/static/texture.svg">Текстур пак</a>
                     <a class="btn-glass btn-glass-outline font"
@@ -46,7 +48,6 @@
     <header class="glass-header fixed-top mx-2 my-2"
         style="height: 68px; border-radius: 15px; max-width: 100vw; width: auto;">
         <nav class="navbar navbar-expand-lg h-100 p-0">
-            <!-- ЛЕВАЯ ЧАСТЬ -->
             <a class="navbar-brand d-flex align-items-center justify-content-center p-0 m-0 ms-md-3 ms-4" href="/">
                 <img src="/static/nexus_logo.png" height="50">
                 <img src="/static/nexus_title.png" height="30" ondrag="playSound()">
@@ -61,7 +62,7 @@
                             <span class="nav-indicator"></span>
                         </a>
                     </li>
-                    <li class="nav-item dropdown"> <!-- добавил класс dropdown -->
+                    <li class="nav-item dropdown">
                         <a href="/news" class="nav-link-glass d-flex align-items-center font" style="height: 48px;"
                             role="button" title="Новости" data-bs-toggle="dropdown" data-bs-auto-close="false"
                             aria-expanded="false">
@@ -90,7 +91,7 @@
                 </ul>
             </div>
 
-            <!-- ПРАВАЯ ЧАСТЬ -->
+
             <div class="d-flex flex-row gap-3 ms-auto align-items-center me-3">
                 <!-- Поиск -->
                 <!--<div class="search-glass d-flex align-items-center font" style="height: 44px; width: 250px;">
@@ -100,7 +101,6 @@
                         title="Поиск">
                 </div>-->
                 {% if current_user.is_authenticated %}
-                <!-- Добавить пост -->
                 <a data-bs-toggle="modal" data-bs-target="#postsModal" class="btn-glass btn-glass-outline font p-0
                     dropdown" style="
                         width: 44px;
@@ -112,16 +112,16 @@
                         border-radius: 50%;" title="Добавить пост">
                 </a>
                 <div class="vr my-2"></div>
-                <li class="nav-item dropdown">
-                    <button class="btn-glass btn-glass-outline font p-0 position-relative" data-bs-toggle="dropdown"
+                <li class="nav-item dropdown position-relative" style="overflow: visible;">
+                    <button class="btn-glass btn-glass-outline font p-0" data-bs-toggle="dropdown"
                         data-bs-auto-close="false" aria-expanded="false" title="Уведомления" id="notificationDropdown"
                         style="width: 44px; height: 44px; background-image: url(/static/notice.svg); background-size: 20px; background-repeat: no-repeat; background-position: center; border-radius: 50%;">
-                        {% if notifications_count > 0 %}
-                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
-                            {{ notifications_count }}
-                        </span>
-                        {% endif %}
                     </button>
+                    {% if notifications_count > 0 %}
+                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="z-index: 1000;">
+                        {{ notifications_count }}
+                    </span>
+                    {% endif %}
                     <ul class="dropdown-menu dropdown-menu-end" style="width: 320px;">
                         <li><span class="font ms-3">Последние уведомления ({{ notifications_count }})</span></li>
                         <li>
@@ -132,7 +132,7 @@
                         <li>
                             <a class="dropdown-item" href="#">
                                 {{ notification.author.username if notification.author else 'Неизвестно' }} {{
-                                notification.type }}
+                                notification.message }}
                             </a>
                         </li>
                         {% endfor %}
@@ -148,7 +148,6 @@
                     </ul>
                 </li>
 
-                <!-- Профиль / Вход -->
                 <div class="dropdown my-2">
                     {% if user.avatar %}
                     <button class="btn-glass btn-glass-outline font p-0" style="

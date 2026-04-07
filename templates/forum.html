@@ -16,26 +16,9 @@
 
 {% block main %}
 <main class="content">
-  <!-- Аудио элемент -->
-  <audio id="clickSound" style="display: none;" preload="auto">
-    <source src="/static/sound.mp3" type="audio/mpeg" />
-  </audio>
-
-  <script>
-    function playSound() {
-      const sound = document.getElementById('clickSound')
-      if (sound) {
-        sound.volume = 0.1
-        sound.currentTime = пр
-        sound.play().catch((error) => {
-          console.log('Звук не воспроизведен:', error)
-        })
-      }
-    }
-  </script>
   <div class="container">
-    <div id="posts-container" style="border-radius: 15px; background: rgba(15, 15, 30, 1); max-width: 1400px;"
-      class="mt-5 d-flex flex-column gap-2 justify-content-center p-3 mx-auto">
+    <div id="posts-container"
+      class="d-flex flex-column gap-2 justify-content-center p-3 mx-auto main-page-content">
       <div class="mb-4 d-flex justify-content-between w-100">
         <span class="font-classic ms-2"
           style="background: linear-gradient(45deg, #6f42c1, #a855f7, #d946ef); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-size: 2rem; user-select: none;">ФОРУМ</span>
@@ -93,8 +76,8 @@
             <div class="d-flex">
               <!--Автор и дата-->
               <a class="mb-0 link-custom text-secondary font-small font-mine" onclick="playSound()" href="/user/{{ author.id }}">
-                <img src="/static/avatars/{{ author.avatar }}"
-                  style="border-radius: 50%; height: 15px; margin-bottom: 0;">
+                <img src="/static/avatars/{{ author.avatar }}" height="15" width="15"
+                  style="border-radius: 50%; margin-bottom: 0;">
                 {{ author.username }} • {{ time_ago(discuss.date) }}</a>
             </div>
           </div>
@@ -104,7 +87,7 @@
             <!--Ответить/Лайк-->
             {% if current_user.is_authenticated %}
             <div class="d-flex align-items-center">
-              <form class="like-form" data-id="{{ discuss.id }}">
+              <form class="like-form" data-id="{{ discuss.id }}" data-type="discuss">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button type="submit" class="btn-unstyled button-custom px-2 like-button" title="Нравится">
                   <img id="like-icon-{{ discuss.id }}" class="like-icon"

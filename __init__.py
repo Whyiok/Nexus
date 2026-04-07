@@ -130,26 +130,10 @@ class Comments(db.Model):  # Комментарии
 
     def __init__(self, id_author, comment, id_comment=None, id_discuss=None, id_post=None):
         self.id_author = id_author
-        self.id_post = id_post
-        self.id_discuss = id_discuss
+        self.id_post = id_post or ""
+        self.id_discuss = id_discuss or ""
         self.id_comment = id_comment or ""
         self.comment = comment
-
-
-class Reply(db.Model):  # Комментарии
-    id = db.Column(db.Integer, primary_key=True)
-    id_author = db.Column(db.Integer)
-    id_discuss = db.Column(db.Integer)
-    id_comment = db.Column(db.Integer)
-    reply = db.Column(db.Text)
-    rating = db.Column(db.Integer, default=0)
-    date = db.Column(db.DateTime, default=datetime.utcnow)
-
-    def __init__(self, id_author, id_discuss, reply, id_comment=None):
-        self.id_author = id_author
-        self.id_discuss = id_discuss
-        self.id_comment = id_comment or ""
-        self.reply = reply
 
 
 class Likes(db.Model):  # Лайки
@@ -202,18 +186,18 @@ class Posts(db.Model):  # Посты
     text = db.Column(db.Text)
     rating = db.Column(db.Integer, default=0)
     views = db.Column(db.Integer, default=0)
-    categories = db.Column(db.JSON, default=[])
+    type = db.Column(db.JSON, default=[])
     image_name = db.Column(db.String)
     date = db.Column(db.DateTime, default=datetime.utcnow)
     is_news = db.Column(db.Boolean, default=False)
     official = db.Column(db.Boolean, default=False)
 
-    def __init__(self, id_author, title, text, views, comments, image_name, official=None, is_news=None):
+    def __init__(self, id_author, title, text, views, type, image_name, official=None, is_news=None):
         self.id_author = id_author
         self.title = title
         self.text = text
         self.views = views
-        self.categories = categories
+        self.type = type
         self.image_name = image_name
         self.is_news = is_news or False
         self.official = official or False
@@ -245,20 +229,25 @@ MAX_FILE_SIZE = 16 * 1024 * 1024  # Размер файлов 16MB
 def time_ago(date):
     now = datetime.utcnow()
     diff = now - date
-    if diff.seconds < 60:
-        seconds = diff.seconds
-        return f"{seconds} секунд назад"
-    elif diff.seconds > 3600:
-        hours = diff.seconds // 3600
-        return f"{hours} минут назад"
-    elif diff.seconds > 60:
-        minutes = diff.seconds // 60
+    
+    total_seconds = int(diff.total_seconds())
+    
+    if total_seconds < 60:
+        return f"{total_seconds} секунд назад"
+    elif total_seconds < 3600:
+        minutes = total_seconds // 60
         return f"{minutes} минут назад"
+    elif total_seconds < 86400:
+        hours = total_seconds // 3600
+        return f"{hours} часов назад"
+    elif total_seconds < 2592000:
+        days = total_seconds // 86400
+        return f"{days} дней назад"
     else:
-        return "Только что"
+        return date.strftime("%d.%m.%Y")
 
 
-def generate_code():  # Генерация кода
+def generate_code():
     return ''.join([str(random.randint(0, 9)) for _ in range(6)])
 
 
@@ -271,7 +260,8 @@ def allowed_file(filename):
 def notifications():
     user = current_user
     id = user.id
-    notifications = Notification.query.filter_by(user_id=id).all()
+    notice_author = ''
+    notifications = Notification.query.filter_by(user_id=id).limit(3).all()
     for notification in notifications:
         notice_author = notification.from_user_id
     return render_template('notifications.html', notifications=notifications, notice_author=notice_author)
@@ -382,10 +372,11 @@ def inject_user():
 @app.route('/')
 def index():
     posts = Posts.query.order_by(Posts.views.desc()).all()
+    comments_len = 0
     if posts:
         for post in posts:
             comment = Comments.query.filter_by(id_post=post.id).all()
-            post.author = post.id_author
+            post.author = User.query.get(post.id_author)
             comments_len = len(comment)
     return render_template("index.html", posts=posts, comments_len=comments_len)
 
@@ -519,6 +510,7 @@ def update_user():
         new_pass_repeat = request.form.get('new_pass_repeat')
         user = current_user
         updated = False
+        id = current_user.id
 
         if email and email != '' and email != user.email:
             user.email = email
@@ -541,7 +533,7 @@ def update_user():
             if not allowed_file(avatar.filename):
                 flash(
                     "Недопустимый формат файла! Разрешены: gif, png, jpg, jpeg", 'danger')
-                return redirect(url_for('account'))
+                return redirect(url_for('user', id=id))
 
             # Проверка размера файла
             avatar.seek(0, os.SEEK_END)
@@ -551,7 +543,7 @@ def update_user():
             if file_size > MAX_FILE_SIZE:
                 flash(
                     f"Файл слишком большой! Максимум {MAX_FILE_SIZE // 1024 // 1024}MB", 'danger')
-                return redirect(url_for('account'))
+                return redirect(url_for('user', id=id))
 
             filename = secure_filename(avatar.filename)
             filepath = os.path.join(app.config['AVATARS_FOLDER'], filename)
@@ -564,7 +556,7 @@ def update_user():
         if updated:
             db.session.commit()
 
-    return redirect(url_for('account', id=id))
+    return redirect(url_for('user', id=id))
 
 
 @app.route('/del_account', methods=['GET', 'POST'])
@@ -576,25 +568,43 @@ def del_account():
     return redirect("/")
 
 
-@app.route('/comment/<int:id>', methods=['GET', 'POST'])
-def comment(id):
+@app.route('/comment/<contentType>/<int:id>', methods=['GET', 'POST'])
+def comment(contentType, id):
     if current_user.is_authenticated:
         if request.method == 'POST':
-            text = request.form.get('text')
-            post_id = request.form.get('post_id')
-            post = Posts.query.get(post_id)
-            user = current_user
-            if len(text) > 500:
-                flash("Недопустимый запрос.", 'danger')
-                return redirect(url_for("forum"))
-            new_notification = Notification(
-                post.id_author, user.id, post_id, 'ответил(а) вам!', 'лол')
-            new_comment = Comments(user.id, post_id, text)
-            db.session.add(new_notification)
-            db.session.add(new_comment)
-            db.session.commit()
-            flash("Комментарий добавлен!", 'success')
-        return redirect(url_for('post', id=id))
+            if contentType == 'post':
+                text = request.form.get('text')
+                post_id = request.form.get('post_id')
+                post = Posts.query.get(post_id)
+                if len(text) > 500:
+                    flash("Недопустимый запрос.", 'danger')
+                    return redirect(url_for("index"))
+                new_notification = Notification(post.id_author, current_user.id, post_id, 'прокомментировал ваш пост!', 'лол')
+                new_comment = Comments(id_author=current_user.id, id_post=post_id, comment=text)
+                db.session.add(new_notification)
+                db.session.add(new_comment)
+                db.session.commit()
+                flash("Комментарий добавлен!", 'success')
+                return redirect(url_for('post', id=id))
+
+            elif contentType == 'discuss':
+                text = request.form.get('text')
+                discuss_id = request.form.get('discuss_id')
+                discuss = Discuss.query.get(discuss_id)
+                if len(text) > 500:
+                    flash("Недопустимый запрос.", 'danger')
+                    return redirect(url_for('forum'))
+                new_notification = Notification(
+                    discuss.id_author, current_user.id, discuss_id, 'ответил на вашу дискуссию!', 'лол')
+                new_comment = Comments(id_author=current_user.id, id_discuss=discuss_id, comment=text)
+                db.session.add(new_notification)
+                db.session.add(new_comment)
+                db.session.commit()
+                flash("Ответ добавлен!", 'success')
+                return redirect(url_for('discuss', id=id))
+            else:
+                flash("Пост или Дискуссия не найдены!", 'danger')
+                return redirect(url_for('index'))
     else:
         flash("Пожалуйста, войдите в аккаунт!", 'danger')
         return redirect(url_for('login'))
@@ -634,13 +644,15 @@ def forum():
 def add_post(post_type):
     if current_user.is_authenticated:
         if request.method == 'POST':
-
             file = request.files.get('image')
             title = request.form.get('title')
             text = request.form.get('text')
             id_author = current_user.id
             views = 0
-            categories = request.form.getlist('categories')
+            true_types = ['article', 'server_java', 'server_bedrock', 'texture_pack']
+            if not post_type in true_types:
+                flash("Недопустимый тип поста.", 'danger')
+                return redirect(url_for('index'))
 
             if title == '' or text == '':
                 flash("Недопустимый запрос.", 'danger')
@@ -677,7 +689,7 @@ def add_post(post_type):
                             image_data = None
 
                         db.session.add(Posts(id_author=id_author, title=title, text=text,
-                                       views=views, categories=categories, image_name=file.filename))
+                                       views=views, type=post_type, image_name=file.filename))
                         db.session.commit()
                         flash("Пост успешно добавлен!", 'success')
                         return redirect(url_for('forum'))
@@ -869,35 +881,11 @@ def delete_post(id):
             return redirect(url_for('post', id=id))
 
 
-@app.route('/like/<int:id>', methods=['GET', 'POST'])
-def like(id):
+@app.route('/like/<contentType>/<int:id>', methods=['GET', 'POST'])
+def like(contentType, id):
     if current_user.is_authenticated:
-        post = db.session.get(Posts, id)
-        discuss = db.session.get(Discuss, id)
-        if discuss is None:
-            like = Likes.query.filter_by(
-                id_author=current_user.id, id_discuss=id).first()
-            if like:
-                db.session.delete(like)
-                post.rating -= 1
-                db.session.commit()
-                return jsonify({
-                    "rating": post.rating,
-                    "liked": False
-                })
-            else:
-                new_like = Likes(id_author=current_user.id, id_post=id)
-                new_notice = Notification(user_id=post.id_author, from_user_id=current_user.id,
-                                          post_id=post.id, type="понравился ваш пост!", message="")
-                post.rating += 1
-                db.session.add(new_like)
-                db.session.add(new_notice)
-                db.session.commit()
-                return jsonify({
-                    "rating": post.rating,
-                    "liked": True
-                })
-        elif post is None:
+        if contentType == 'discuss':
+            discuss = Discuss.query.filter_by(id=id).first()
             like = Likes.query.filter_by(
                 id_author=current_user.id, id_discuss=id).first()
             if like:
@@ -918,6 +906,30 @@ def like(id):
                 db.session.commit()
                 return jsonify({
                     "rating": discuss.rating,
+                    "liked": True
+                })
+        elif contentType == 'post':
+            post = Posts.query.filter_by(id=id).first()
+            like = Likes.query.filter_by(
+                id_author=current_user.id, id_post=id).first()
+            if like:
+                db.session.delete(like)
+                post.rating -= 1
+                db.session.commit()
+                return jsonify({
+                    "rating": post.rating,
+                    "liked": False
+                })
+            else:
+                new_like = Likes(id_author=current_user.id, id_post=id)
+                new_notice = Notification(user_id=post.id_author, from_user_id=current_user.id,
+                                          post_id=post.id, type="понравился ваш пост!", message="")
+                post.rating += 1
+                db.session.add(new_like)
+                db.session.add(new_notice)
+                db.session.commit()
+                return jsonify({
+                    "rating": post.rating,
                     "liked": True
                 })
         else:

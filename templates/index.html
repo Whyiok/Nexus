@@ -11,90 +11,60 @@
 {% endblock %}
 
 {% block main %}
-<main>
-    <div class="container" style="margin-top: 10rem;">
-        <!-- Hero секция -->
-        <audio id="clickSound" style="display: none;" preload="auto">
-            <source src="/static/click.mp3" type="audio/mpeg">
-        </audio>
-
-        <script>
-            function playSound() {
-                const sound = document.getElementById('clickSound');
-                if (sound) {
-                    sound.volume = 1;
-                    sound.currentTime = 0;
-                    sound.play().catch(error => {
-                        console.log("Звук не воспроизведен:", error);
-                    });
-                }
-            }
-        </script>
-        <div class="px-4 text-center">
-            <!--
-            <div id="carouselExample" class="carousel slide m-3 d-flex justify-content-center" style="width: 50rem;">
-                <div class="carousel-inner">
-                    <div class="carousel-item active" style="width: 50rem; height: 30rem;">
-                        <img src="/static/uploads/i-think-the-end-dimension-should-have-some-stars-in-the-sky-v0-39xwehrr8s3f1.webp"
-                            class="d-block w-100" style="border-radius: 15px;">
-                        <div class="div-glass position-absolute bottom-0 d-flex flex-column">
-                            <a href="/forum" class="font text-light">Теория о энде</a>
-                            <p class="font text-light">Популярный пост</p>
-                        </div>
-                    </div>
-                    <div class="carousel-item" style="width: 50rem; height: 30rem;">
-                        <img src="/static/uploads/14784448-purebdcraft-planetminecraft.jpg" class="d-block w-100"
-                            style="border-radius: 15px;">
-                    </div>
-                    <div class="carousel-item" style="width: 50rem; height: 30rem;">
-                        <img src="/static/uploads/pixil-frame-0.png" class="d-block w-100" style="border-radius: 15px;">
-                    </div>
-                </div>
-                <button class="carousel-control-prev" type="button" data-bs-target="#carouselExample"
-                    data-bs-slide="prev">
-                    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-                    <span class="visually-hidden">Предыдущий</span>
-                </button>
-                <button class="carousel-control-next" type="button" data-bs-target="#carouselExample"
-                    data-bs-slide="next">
-                    <span class="carousel-control-next-icon" aria-hidden="true"></span>
-                    <span class="visually-hidden">Следующий</span>
-                </button>
-            </div> -->
-            <div class="main-page-content">
-                <div class="d-flex flex-column">
+<main class="content">
+    <div class="container">
+        <div class="text-center d-flex justify-content-center">
+            <div class="main-page-content p-3">
+                <div>
                     <h3 class="mt-4 font">Приветствуем вас на Nexus MC!</h3>
                     <span class="font-mine mt-2">Nexus MC - это место, на котором игроки Minecraft деляться своими
                         мыслями и творениями!<br>
                         Вы можете обсудить с другими пользователями различные темы, добавлять посты, или просто
                         общаться.</span>
+                    {%if current_user.is_authenticated%}
+                    {%else%}
+                    <div style="background-image: url(/static/img/background.png);
+                                    background-position: center;
+                                    background-size: 100%;
+                                    background-repeat: none;
+                                    border-radius: 15px;
+                                    padding: 15px;" class="text-start m-2">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                        <label class="my-2 font">Хотите оставлять комментарии, создавать посты и много чего
+                            другого?</label>
+                        <div class="d-flex gap-1">
+                            <a class="btn-glass btn-glass-primary font" href="/login">Вход</a>
+                            <a class="font btn-glass btn-glass-outline" href="/register">Регистрация</a>
+                        </div>
+                    </div>
+                    {%endif%}
                     <h3 class="mt-4 font">Популярные посты:</h3>
-                    <div>
+                    <div class="row g-3">
                         {% if posts|length > 0 %}
                         {% for post in posts %}
-                        <div class="post m-2">
-                            <!-- Картинка -->
-                            {% if post.image_name %}
-                            <a href="/post/{{ post.id }}" class="text-decoration-none">
-                                <div style="width: 5rem; height: 5rem;">
-                                    <img src="{{ url_for('static', filename='uploads/' ~ post.image_name) }}"
-                                        alt="Post image"
-                                        style="width: 100%; height: 200px; object-fit: cover; object-position: center;">
-                                </div>
-                            </a>
-                            {% else %}
-                            <!-- Серое заполнение, если нет картинки -->
-                            <a href="/post/{{ post.id }}" class="text-decoration-none">
-                                <div style="
+                        <div class="col-12 col-md-6 col-lg-4">
+                            <div class="{% if post.type == 'exclusive' %}ex-post{% else %}post{% endif %}">
+                                <!-- Картинка -->
+                                {% if post.image_name %}
+                                <a href="/post/{{ post.id }}" class="text-decoration-none">
+                                    <div style="width: 100%; height: 200px;">
+                                        <img src="{{ url_for('static', filename='uploads/' ~ post.image_name) }}"
+                                            alt="Post image"
+                                            style="width: 100%; height: 200px; object-fit: cover; object-position: center;">
+                                    </div>
+                                </a>
+                                {% else %}
+                                <!-- Серое заполнение, если нет картинки -->
+                                <a href="/post/{{ post.id }}" class="text-decoration-none">
+                                    <div style="
                 width: 100%;
                 height: 200px;
                 background: linear-gradient(135deg, #2a2a3a 0%, #1a1a2a 100%);
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                border-bottom: 1px solid rgba(111, 66, 193, 0.3);
             ">
-                                    <span style="
+                                        <span style="
                     color: rgba(255,255,255,0.3);
                     font-size: 1rem;
                     font-family: 'Unbounded', sans-serif;
@@ -102,26 +72,53 @@
                     user-select: none;
                     margin-left: 0.6rem;
                 ">NO IMAGE</span>
-                                </div>
-                            </a>
-                            {% endif %}
+                                    </div>
+                                </a>
+                                {% endif %}
 
-                            <!-- Контент -->
-                            <div style="padding: 15px; flex: 1; display: flex; flex-direction: column;">
-                                <a style="color: white; margin: 0 0 10px 0; font-family: 'Unbounded', sans-serif;"
-                                    class="fw-bold text-decoration-none fs-5 text-start" href="/post/{{ post.id }}">{{
-                                    post.title }}</a>
-                                <a class="m-0 link-custom text-secondary font-small font-mine text-start" onclick="playSound()"
-                                    href="/user/{{ post.author.id }}">
-                                    <img src="/static/avatars/{{ post.author.avatar }}"
-                                        style="border-radius: 50%; height: 15px; margin-bottom: 0;">
-                                    {{ post.author.username }} • {{ time_ago(post.date) }}</a>
-
-                                <div class="d-flex flex-row gap-3 mt-auto bg-purple rounded-pill align-items-center p-2">
-                                    <span title="Просмотры"><img src="/static/view.svg" class="me-1 ms-2" height="20">{{
-                                        post.views }}</span>
-                                    <span title="Ответы"><img src="/static/comment.svg" class="me-1" height="20">{{
-                                        comments_len }}</span>
+                                <!-- Контент -->
+                                <div style="padding: 15px; flex: 1; display: flex; flex-direction: column;">
+                                    <hr class="p-1">
+                                    <a style="color: white; font-family: 'Unbounded', sans-serif;"
+                                        class="fw-bold text-decoration-none fs-5 text-start" title="Заголовок"
+                                        href="/post/{{ post.id }}">{{
+                                        post.title }}</a>
+                                    <a style="font-family: 'Unbounded', sans-serif;" title="Тип поста"
+                                        class="fw-bold text-decoration-none fs-7 {% if post.type == 'exclusive' %}text-golden{% else %}text-secondary{% endif %} text-start">{%
+                                        if post.type == 'article' %}Статья{% elif post.type == 'server_java' %}Java
+                                        сервер{% elif post.type == 'server_bedrock' %}Bedrock сервер{% elif post.type ==
+                                        'texture_pack' %}Текстур пак{% elif post.type == 'exclusive' %}Эксклюзивный{%
+                                        else %}Неизвестный тип поста{% endif %}</a>
+                                    <div class="d-flex">
+                                        <a class="m-0 link-custom text-secondary font-small font-mine text-start"
+                                            href="/user/{{ post.author.id }}">
+                                            <img src="/static/avatars/{{ post.author.avatar }}" height="15" width="15"
+                                                style="border-radius: 50%; margin-bottom: 0;">
+                                            {{ post.author.username }}{%if post.author.username == 'Whyiok'%}<img
+                                                src="static/verified.svg" height="15" class="m-1">{%endif%} </a>
+                                        <a
+                                            class="m-0 text-decoration-none text-secondary font-small font-mine text-start">•
+                                            {{
+                                            time_ago(post.date) }}</a>
+                                    </div>
+                                    <div
+                                        class="d-flex flex-row gap-3 mt-auto {% if post.type == 'exclusive' %}bg-golden{% else %}bg-purple{% endif %} rounded-pill align-items-center p-2">
+                                        <span title="Просмотры" class="font-mine"><img src="/static/view.svg"
+                                                class="me-1 ms-2" height="20">{{
+                                            post.views }}</span>
+                                        <span title="Комментарии" class="font-mine"><img src="/static/comment.svg"
+                                                class="me-1" height="20">{{
+                                            comments_len }}</span>
+                                        <form class="like-form" data-id="{{ post.id }}" data-type="post">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                            <button type="submit" class="btn-unstyled button-custom" title="Нравится">
+                                                <img id="like-icon-{{ post.id }}"
+                                                    src="/static/{% if post.liked %}like_filled.svg{% else %}like.svg{% endif %}">
+                                            </button>
+                                            <span id="rating-{{ post.id }}" class="ms-2 mt-2 font-mine text-white">{{
+                                                post.rating }}</span>
+                                        </form>
+                                    </div>
                                 </div>
                             </div>
                         </div>
