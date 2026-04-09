@@ -386,6 +386,19 @@ def index():
             comments_len = len(comment)
     return render_template("index.html", posts=posts, comments_len=comments_len)
 
+@app.route('/moderate_posts')
+def moderate_posts():
+    if current_user.is_moderator:
+        posts = Posts.query.filter_by(status='on_moderating').all()
+        if posts:
+            for post in posts:
+                comment = Comments.query.filter_by(id_post=post.id).all()
+                post.author = User.query.get(post.id_author)
+                comments_len = len(comment)
+        return render_template("moderate_posts.html", posts=posts)
+    else:
+        return redirect(url_for('index'))
+
 
 @app.route('/news_nexus')
 def news_nexus():

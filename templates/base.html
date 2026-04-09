@@ -105,6 +105,17 @@
                         title="Поиск">
                 </div>
                 {% if current_user.is_authenticated %}
+                {% if current_user.is_moderator %}
+                <a href="/moderate_posts" class="btn-glass btn-glass-outline font p-0" style="
+                        width: 44px;
+                        height: 44px;
+                        background-image: url(/static/moderate.svg);
+                        background-size: 20px;
+                        background-repeat: no-repeat;
+                        background-position: center;
+                        border-radius: 50%;" title="Модерация постов">
+                </a>
+                {% endif %}
                 <a data-bs-toggle="modal" data-bs-target="#postsModal" class="btn-glass btn-glass-outline font p-0
                     dropdown" style="
                         width: 44px;
