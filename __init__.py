@@ -186,17 +186,19 @@ class Posts(db.Model):  # Посты
     text = db.Column(db.Text)
     rating = db.Column(db.Integer, default=0)
     views = db.Column(db.Integer, default=0)
+    status = db.Column(db.Integer, default='on_moderating')
     type = db.Column(db.JSON, default=[])
     image_name = db.Column(db.String)
     date = db.Column(db.DateTime, default=datetime.utcnow)
     is_news = db.Column(db.Boolean, default=False)
     official = db.Column(db.Boolean, default=False)
 
-    def __init__(self, id_author, title, text, views, type, image_name, official=None, is_news=None):
+    def __init__(self, id_author, title, text, views, status, type, image_name, official=None, is_news=None):
         self.id_author = id_author
         self.title = title
         self.text = text
         self.views = views
+        self.status = status
         self.type = type
         self.image_name = image_name
         self.is_news = is_news or False
@@ -210,14 +212,16 @@ class Discuss(db.Model):  # Посты
     text = db.Column(db.Text)
     rating = db.Column(db.Integer, default=0)
     views = db.Column(db.Integer, default=0)
+    status = db.Column(db.Integer, default='on_moderating')
     categories = db.Column(db.JSON, default=[])
     date = db.Column(db.DateTime, default=datetime.utcnow)
 
-    def __init__(self, id_author, title, text, views, categories):
+    def __init__(self, id_author, title, text, views, status, categories):
         self.id_author = id_author
         self.title = title
         self.text = text
         self.views = views
+        self.status = status
         self.categories = categories
 
 
@@ -691,7 +695,7 @@ def add_post(post_type):
                             image_data = None
 
                         db.session.add(Posts(id_author=id_author, title=title, text=text,
-                                       views=views, type=post_type, image_name=file.filename))
+                                       views=views, status='on_moderating', type=post_type, image_name=file.filename))
                         db.session.commit()
                         flash("Пост успешно добавлен!", 'success')
                         return redirect(url_for('index'))
@@ -729,7 +733,7 @@ def add_discuss():
                 else:
                     try:
                         db.session.add(Discuss(
-                            id_author=id_author, title=title, text=text, views=views, categories=categories))
+                            id_author=id_author, title=title, text=text, views=views, status='on_moderating', categories=categories))
                         db.session.commit()
                         flash("Дискуссия успешно добавлена!", 'success')
                         return redirect(url_for('forum'))
