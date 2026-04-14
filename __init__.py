@@ -58,12 +58,16 @@ class User(db.Model, UserMixin):  # Пользователи
     edition = db.Column(db.String)
     hash_password = db.Column(db.String)
     avatar = db.Column(db.String)
+    subscribers = db.Column(db.Integer, default=0)
     date = db.Column(db.DateTime, default=datetime.utcnow)
     is_moderator = db.Column(db.Boolean, default=False)
     is_admin = db.Column(db.Boolean, default=False)
     is_checked = db.Column(db.Boolean, default=False)
     is_banned = db.Column(db.Boolean, default=False)
     is_frozen = db.Column(db.Boolean, default=False)
+    banned_until = db.Column(db.DateTime, nullable=True)
+    permanent_ban = db.Column(db.Boolean, nullable=True)
+    ban_reason = db.Column(db.String(500), nullable=True)
 
     def __init__(self, username, email, hash_password, edition, is_moderator=None, is_admin=None, is_checked=None, is_banned=None, is_frozen=None, description=None):
         self.username = username
@@ -80,6 +84,20 @@ class User(db.Model, UserMixin):  # Пользователи
     def __str__(self):
         return f"ID: {self.id}, Username: {self.username}, Email: {self.email}"
 
+
+class Appeal(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    moderator_id = db.Column(db.Integer, nullable=True)
+    reason = db.Column(db.String)
+    status = db.Column(db.String, default='active')
+    time = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def __init__(self, user_id, reason, status, moderator_id=None):
+        self.user_id = user_id
+        self.reason = reason
+        self.status = status
+        self.moderator_id = moderator_id or False
 
 class Notification(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -233,9 +251,9 @@ MAX_FILE_SIZE = 16 * 1024 * 1024  # Размер файлов 16MB
 def time_ago(date):
     now = datetime.utcnow()
     diff = now - date
-    
+
     total_seconds = int(diff.total_seconds())
-    
+
     if total_seconds < 60:
         return f"{total_seconds} секунд назад"
     elif total_seconds < 3600:
@@ -290,8 +308,8 @@ def mark_notice():
         return jsonify({'success': False, 'message': str(e)}), 500
 
 
-@app.route('/send_email', methods=['POST'])
-def send_email():
+@app.route('/send_email/<verifyType>', methods=['POST'])
+def send_email(verifyType):
     if request.method == 'POST':
 
         # Получение данных из формы для их сохранения
@@ -386,6 +404,7 @@ def index():
             comments_len = len(comment)
     return render_template("index.html", posts=posts, comments_len=comments_len)
 
+
 @app.route('/moderate_posts')
 def moderate_posts():
     if current_user.is_moderator:
@@ -468,13 +487,9 @@ def login():
 
         return render_template("login.html")
 
-    email = request.form.get('email')
-    password = request.form.get('password')
+    email = session['email']
+    password = session['password']
     user = User.query.filter_by(email=email).first()
-
-    if user.is_banned:
-        flash('Вы забанены!', 'danger')
-        return redirect(url_for('index'))
 
     if user is None:
 
@@ -598,8 +613,10 @@ def comment(contentType, id):
                 if len(text) > 500:
                     flash("Недопустимый запрос.", 'danger')
                     return redirect(url_for("index"))
-                new_notification = Notification(post.id_author, current_user.id, post_id, 'прокомментировал ваш пост!', 'лол')
-                new_comment = Comments(id_author=current_user.id, id_post=post_id, comment=text)
+                new_notification = Notification(
+                    post.id_author, current_user.id, post_id, 'прокомментировал ваш пост!', 'лол')
+                new_comment = Comments(
+                    id_author=current_user.id, id_post=post_id, comment=text)
                 db.session.add(new_notification)
                 db.session.add(new_comment)
                 db.session.commit()
@@ -615,7 +632,8 @@ def comment(contentType, id):
                     return redirect(url_for('forum'))
                 new_notification = Notification(
                     discuss.id_author, current_user.id, discuss_id, 'ответил на вашу дискуссию!', 'лол')
-                new_comment = Comments(id_author=current_user.id, id_discuss=discuss_id, comment=text)
+                new_comment = Comments(
+                    id_author=current_user.id, id_discuss=discuss_id, comment=text)
                 db.session.add(new_notification)
                 db.session.add(new_comment)
                 db.session.commit()
@@ -668,7 +686,8 @@ def add_post(post_type):
             text = request.form.get('text')
             id_author = current_user.id
             views = 0
-            true_types = ['article', 'server_java', 'server_bedrock', 'texture_pack']
+            true_types = ['article', 'server_java',
+                          'server_bedrock', 'texture_pack']
             if not post_type in true_types:
                 flash("Недопустимый тип поста.", 'danger')
                 return redirect(url_for('index'))
@@ -722,6 +741,15 @@ def add_post(post_type):
     else:
         flash("Войдите в аккаунт!", 'danger')
         return redirect(url_for('login'))
+
+
+@app.route('/accept/<contentType>/<int:id>', methods=['GET', 'POST'])
+def accept(contentType, id):
+    if contentType == 'post':
+        post = Posts.query.filter_by(id=id).first()
+        post.status = 'moderated' 
+        db.session.commit()
+    return redirect(url_for('moderate_posts'))
 
 
 @app.route('/add_discuss', methods=['GET', 'POST'])
@@ -813,6 +841,7 @@ def discuss(id):
         db.session.commit()
 
     return render_template("discuss.html", discuss=discuss, liked=liked, disliked=disliked, user_a=user_a, comments=comments)
+
 
 @app.route('/post/<int:id>', methods=['GET', 'POST'])
 def post(id):
@@ -975,7 +1004,7 @@ def report(id):
             db.session.commit()
             flash('Спасибо за помощь!', 'success')
             return redirect(url_for('forum'))
-            
+
         elif discuss:
             for moderator in moderators:
                 new_notice = Notification(user_id=moderator.id, from_user_id=current_user.id,
@@ -984,7 +1013,7 @@ def report(id):
             db.session.commit()
             flash('Спасибо за помощь!', 'success')
             return redirect(url_for('forum'))
-            
+
         else:
             flash('Нету такого поста или дискуссии!', 'danger')
             return redirect(url_for('forum'))

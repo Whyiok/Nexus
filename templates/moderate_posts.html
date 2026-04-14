@@ -16,11 +16,6 @@
         <div class="text-center d-flex justify-content-center">
             <div class="main-page-content p-3">
                 <div>
-                    <h3 class="mt-4 font">Приветствуем вас на Nexus MC!</h3>
-                    <span class="font-mine mt-2">Nexus MC - это место, на котором игроки Minecraft деляться своими
-                        мыслями и творениями!<br>
-                        Вы можете обсудить с другими пользователями различные темы, добавлять посты, или просто
-                        общаться.</span>
                     {%if current_user.is_authenticated%}
                     {%else%}
                     <div style="background-image: url(/static/img/background.png);
@@ -38,7 +33,7 @@
                         </div>
                     </div>
                     {%endif%}
-                    <h3 class="mt-4 font">Популярные посты:</h3>
+                    <h3 class="mt-4 font">Непроверенные посты:</h3>
                     <div class="row g-3">
                         {% if posts|length > 0 %}
                         {% for post in posts %}
@@ -104,20 +99,20 @@
                                     </div>
                                     <div
                                         class="d-flex flex-row gap-3 mt-auto {% if post.type == 'exclusive' %}bg-golden{% else %}bg-purple{% endif %} rounded-pill align-items-center p-2">
-                                        <form action="/accept_post/{{post.id}}">
+                                        <form action="{{ url_for('accept', contentType='post', id=post.id) }}">
                                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                             <button type="submit" class="btn-unstyled button-custom like-button" title="Принять">
                                                 <img id="like-icon-{{ post.id }}" class="like-icon like-button"
-                                                    src="/static/{% if post.liked %}like_filled.svg{% else %}like.svg{% endif %}">
+                                                    src="/static/accept.svg">
                                                 <span class="mt-2 text-reset font-mine">Принять</span>
                                             </button>
                                         </form>
-                                        <form action="/deny_post/{{post.id}}">
+                                        <form action="/deny/post/{{post.id}}">
                                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                             <button type="submit" class="btn-unstyled button-custom font like-button"
                                                 title="Отклонить">
                                                 <img id="like-icon-{{ post.id }}" class="like-icon"
-                                                    src="/static/accept.svg">
+                                                    src="/static/deny.svg">
                                                 <span class="mt-2 text-reset font-mine">Отклонить</span>
                                             </button>
                                         </form>

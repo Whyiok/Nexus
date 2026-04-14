@@ -15,7 +15,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
                 });
                 const data = await response.json();
-                const likeIcon = document.getElementById(`like-icon-${postId}`); 
+                const likeIcon = document.getElementById(`like-icon-${postId}`);
                 if (likeIcon) {
                     likeIcon.src = data.liked ? '/static/like_filled.svg' : '/static/like.svg';
                 }
@@ -34,7 +34,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Popovers
     const popoverTriggerList = document.querySelectorAll('[data-bs-toggle="popover"]');
-    const popoverList = [...popoverTriggerList].map(popoverTriggerEl => new bootstrap.Popover(popoverTriggerEl));
 
     // Sidebar
     const sidebar = document.getElementById('sidebar');
@@ -100,7 +99,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 if (data.success) {
                     console.log('Уведомления отмечены как прочитанные');
-                    
+
                     // Ищем badge в родительском элементе
                     const badge = notificationDropdown.parentElement.querySelector('.badge');
                     if (badge) {
@@ -122,7 +121,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // Ripple effect функция
     function addRippleEffect(selector) {
         const elements = document.querySelectorAll(selector);
-        
+
         elements.forEach(element => {
             element.addEventListener('click', function (e) {
                 // Удаляем старый круг, если есть
@@ -159,30 +158,107 @@ document.addEventListener('DOMContentLoaded', function () {
     addRippleEffect('.post');
     addRippleEffect('.discuss-custom');
     addRippleEffect('.link-custom');
-    
+
     // Эффект нажатия для кнопок
     function addPressEffect(selector) {
         const elements = document.querySelectorAll(selector);
-        
+
         elements.forEach(element => {
-            element.addEventListener('mousedown', function() {
+            element.addEventListener('mousedown', function () {
                 this.style.transform = 'scale(0.99)';
             });
-            
-            element.addEventListener('mouseup', function() {
+
+            element.addEventListener('mouseup', function () {
                 this.style.transform = '';
             });
-            
-            element.addEventListener('mouseleave', function() {
+
+            element.addEventListener('mouseleave', function () {
                 this.style.transform = '';
             });
         });
     }
-    
+
     // Применяем эффект нажатия
     addPressEffect('.btn-glass');
     addPressEffect('.btn-glass-primary');
     addPressEffect('.btn-glass-outline');
-    
+
     console.log('Ripple effect initialized');
+
+    const passwordToggleBtn = document.getElementById('togglePassword');
+    const img = document.getElementById('hide');
+    const passwordInput = document.getElementById('password');
+
+    if (passwordToggleBtn && img && passwordInput) {
+        passwordToggleBtn.addEventListener('click', function () {
+            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordInput.setAttribute('type', type);
+            img.src = type === 'password' ? '/static/view.svg' : '/static/hide.svg';
+        });
+    }
+
+    // Валидация формы перед отправкой
+
+    const form = document.querySelector('form[action="/send_email"]');
+    if (form) {
+        const verifyType = form.dataset.type;
+        const modal = new bootstrap.Modal(document.getElementById('staticBackdrop'));
+
+        if (modal) {
+            console.log("Модальное окно найдено");
+        };
+
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+            if (verifyType === 'register') {
+                const username = document.getElementById('username').value.trim();
+                const version = document.querySelector('input[name="version"]:checked');
+                const email = document.getElementById('email').value.trim();
+                const password = document.getElementById('password').value.trim();
+
+                // Проверяем все поля
+                if (!username || !email || !password || !version) {
+                    e.preventDefault(); // Останавливаем отправку формы
+                    alert('Пожалуйста, заполните все поля!');
+                    return false;
+                }
+
+                // Проверяем минимальную длину username
+                if (username.length < 4) {
+                    e.preventDefault();
+                    alert('Имя пользователя должно содержать минимум 4 символа!');
+                    return false;
+                }
+
+                // Проверяем email
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailRegex.test(email)) {
+                    e.preventDefault();
+                    alert('Введите корректный email!');
+                    return false;
+                }
+            } else if (verifyType === 'login') {
+                const email = document.getElementById('email').value.trim();
+                const password = document.getElementById('password').value.trim();
+            }
+            
+            const formData = new FormData(form);
+
+            fetch(`/send_email/${verifyType}`, {
+                method: 'POST',
+                body: formData
+            })
+
+                .then(response => {
+                    if (response.ok) {
+                        modal.show();
+                    } else {
+                        alert('Произошла ошибка!');
+                    }
+                })
+                .catch(error => {
+                    alert('Произошла ошибка!');
+                });
+        });
+    }
 });

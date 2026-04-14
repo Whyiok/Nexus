@@ -27,6 +27,12 @@ footer {
     align-items: center !important;
 }
 
+.border {
+    border-radius: 0 0 15px 15px;
+    border-style: hidden;
+    border: none !important;
+}
+
 /* Фон с затемнением */
 body::before {
     content: '';
@@ -439,10 +445,6 @@ select:focus {
 
 .navbar-brand {
     transition: all 0.0 s;
-}
-
-.navbar-brand:active {
-    transform: translateY(2px);
 }
 
 .navbar-brand:hover {

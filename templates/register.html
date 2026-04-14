@@ -103,9 +103,8 @@
                             </div>
                             <div class="text-center">
                                 <!-- Кнопка входа -->
-                                <button type="submit"
-                                    class="btn-glass btn-glass-primary font d-inline-block justify-content-center mb-2"
-                                    data-bs-toggle="modal" data-bs-target="#staticBackdrop">
+                                <button type="submit" id="registerBtn"
+                                    class="btn-glass btn-glass-primary font d-inline-block justify-content-center mb-2">
                                     Регистрация
                                 </button>
                             </div>
@@ -127,30 +126,5 @@
             </div>
         </div>
     </div>
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            const toggleBtn = document.getElementById('togglePassword');
-            const img = document.getElementById('hide');
-            const passwordInput = document.getElementById('password');
-
-            toggleBtn.addEventListener('click', function () {
-
-                const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
-                passwordInput.setAttribute('type', type);
-
-
-                img.src = type === 'password' ? '/static/view.svg' : '/static/hide.svg';
-            });
-        });
-    </script>
-    <script>
-        {% if show_modal %}
-        document.addEventListener('DOMContentLoaded', function () {
-            var myModal = new bootstrap.Modal(document.getElementById('staticBackdrop'));
-            myModal.show();
-        });
-        {% endif %}
-    </script>
-
 </main>
 {% endblock %}
