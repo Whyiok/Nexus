@@ -138,29 +138,33 @@
                         {{ notifications_count }}
                     </span>
                     {% endif %}
-                    <ul class="dropdown-menu dropdown-menu-end" style="width: 320px;">
-                        <li><span class="font ms-3">Последние уведомления ({{ notifications_count }})</span></li>
-                        <li>
-                            <hr class="dropdown-divider">
-                        </li>
+                    <ul class="dropdown-menu dropdown-menu-end text-center p-0" style="width: 500px;">
+                        <p class="font mt-2 mb-0">Последние уведомления ({{ notifications_count }})</p>
+                        <hr class="dropdown-divider">
                         {% if notifications %}
                         {% for notification in notifications %}
-                        <li>
-                            <a class="dropdown-item" href="#">
-                                {{ notification.author.username if notification.author else 'Неизвестно' }} {{
-                                notification.message }}
+                        <div class="dropdown-item text-start d-flex flex-column" style="height: 75px; text-decoration: none;" href="#">
+                            <a class="d-flex flex-row align-items-start text-decoration-none" href="/post/{{ notification.post_id }}">
+                                <img src="/static/avatars/{{ notification.author.avatar }}" height="25" width="25"
+                                    style="border-radius: 50%; margin-right: 10px;">
+                                <div class="flex-grow-1">
+                                    <p class="mb-1">
+                                        {{ notification.author.username if notification.author else 'Неизвестно' }} {{
+                                        notification.message }}
+                                    </p>
+                                    
+                                </div>
                             </a>
-                        </li>
+                            <span class="text-secondary fs-6">{{ notification.date.strftime('%d.%m.%Y %H:%M') }}</span>
+                        </div>
                         {% endfor %}
                         {% else %}
-                        <li><span class="dropdown-item text-secondary">Нет новых уведомлений</span></li>
+                        <p class="text-secondary text-center mb-2">Нет новых уведомлений</p>
                         {% endif %}
-                        <li>
-                            <hr class="dropdown-divider">
-                        </li>
-                        <li class="text-center">
-                            <a class="dropdown-item text-center" href="/notifications">Все уведомления</a>
-                        </li>
+                        <div>
+                            <hr class="dropdown-divider m-0">
+                            <a class="dropdown-item text-center pb-2 br-bottom" href="/notifications">Все уведомления</a>
+                        </div>
                     </ul>
                 </li>
 

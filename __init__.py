@@ -64,12 +64,11 @@ class User(db.Model, UserMixin):  # Пользователи
     is_admin = db.Column(db.Boolean, default=False)
     is_checked = db.Column(db.Boolean, default=False)
     is_banned = db.Column(db.Boolean, default=False)
-    is_frozen = db.Column(db.Boolean, default=False)
     banned_until = db.Column(db.DateTime, nullable=True)
     permanent_ban = db.Column(db.Boolean, nullable=True)
     ban_reason = db.Column(db.String(500), nullable=True)
 
-    def __init__(self, username, email, hash_password, edition, is_moderator=None, is_admin=None, is_checked=None, is_banned=None, is_frozen=None, description=None):
+    def __init__(self, username, email, hash_password, edition, is_moderator=None, is_admin=None, is_checked=None, is_banned=None, description=None):
         self.username = username
         self.description = description or "Пользователь поленился и не добавил инфу о себе :["
         self.email = email
@@ -79,7 +78,6 @@ class User(db.Model, UserMixin):  # Пользователи
         self.is_admin = is_admin or False
         self.is_checked = is_checked or False
         self.is_banned = is_banned or False
-        self.is_frozen = is_frozen or False
 
     def __str__(self):
         return f"ID: {self.id}, Username: {self.username}, Email: {self.email}"
@@ -98,6 +96,7 @@ class Appeal(db.Model):
         self.reason = reason
         self.status = status
         self.moderator_id = moderator_id or False
+
 
 class Notification(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -402,6 +401,13 @@ def index():
             comment = Comments.query.filter_by(id_post=post.id).all()
             post.author = User.query.get(post.id_author)
             comments_len = len(comment)
+
+            if current_user.is_authenticated:
+                like = Likes.query.filter_by(
+                    id_author=current_user.id, id_post=post.id).first()
+                post.liked = like is not None
+            else:
+                post.liked = False
     return render_template("index.html", posts=posts, comments_len=comments_len)
 
 
@@ -427,13 +433,21 @@ def news_nexus():
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == "GET":
-        email = session["email"]
+        # Проверяем, есть ли email в сессии
+        email = session.get("email", "")
         return render_template("register.html", email=email)
 
-    username = session["username"]
-    email = session["email"]
-    password = session["password"]
-    edition = session["edition"]
+    # Проверяем, что все необходимые данные есть в сессии
+    username = session.get("username")
+    email = session.get("email")
+    password = session.get("password")
+    edition = session.get("edition")
+    
+    # Если каких-то данных нет, перенаправляем на регистрацию
+    if not all([username, email, password, edition]):
+        flash("Пожалуйста, заполните форму регистрации сначала", 'danger')
+        return redirect(url_for('register'))
+    
     print(email, username)
 
     # Получение проверочного кода из формы в модальном окне
@@ -487,17 +501,25 @@ def login():
 
         return render_template("login.html")
 
-    email = session['email']
-    password = session['password']
+    # Получаем данные из формы, а не из сессии
+    email = request.form.get('email')
+    password = request.form.get('password')
+    
+    if not email or not password:
+        flash('Пожалуйста, введите email и пароль', 'danger')
+        return redirect("/login")
+    
+    # Сохраняем в сессии для send_email функции
+    session['email'] = email
+    session['password'] = password
+    
     user = User.query.filter_by(email=email).first()
 
     if user is None:
-
         flash('Такого пользователя не существует', 'danger')
         return redirect("/login")
 
     if check_password_hash(user.hash_password, password):
-
         login_user(user)
         session.permanent = True
         flash("Успешный вход!", "success")
@@ -531,7 +553,15 @@ def user(id):
     elif user.username == "Whyiok" or current_user.username == "Nexus":
         status = "Админ"
 
-    return render_template("account.html", user=user, status=status)
+    posts = Posts.query.order_by(Posts.views.desc()).all()
+    comments_len = 0
+    if posts:
+        for post in posts:
+            comment = Comments.query.filter_by(id_post=post.id).all()
+            post.author = User.query.get(post.id_author)
+            comments_len = len(comment)
+
+    return render_template("account.html", user=user, status=status, posts=posts, comments_len=comments_len)
 
 
 @app.route('/update_user', methods=['GET', 'POST'])
@@ -613,8 +643,8 @@ def comment(contentType, id):
                 if len(text) > 500:
                     flash("Недопустимый запрос.", 'danger')
                     return redirect(url_for("index"))
-                new_notification = Notification(
-                    post.id_author, current_user.id, post_id, 'прокомментировал ваш пост!', 'лол')
+                new_notice = Notification(user_id=discuss.id_author, from_user_id=current_user.id,
+                                            discuss_id=discuss.id, type="reply", message="прокомментировал ваш пост!")
                 new_comment = Comments(
                     id_author=current_user.id, id_post=post_id, comment=text)
                 db.session.add(new_notification)
@@ -630,11 +660,11 @@ def comment(contentType, id):
                 if len(text) > 500:
                     flash("Недопустимый запрос.", 'danger')
                     return redirect(url_for('forum'))
-                new_notification = Notification(
-                    discuss.id_author, current_user.id, discuss_id, 'ответил на вашу дискуссию!', 'лол')
+                new_notice = Notification(user_id=discuss.id_author, from_user_id=current_user.id,
+                                            discuss_id=discuss.id, type="reply", message="ответил на вашу дискуссию!")
                 new_comment = Comments(
                     id_author=current_user.id, id_discuss=discuss_id, comment=text)
-                db.session.add(new_notification)
+                db.session.add(new_notice)
                 db.session.add(new_comment)
                 db.session.commit()
                 flash("Ответ добавлен!", 'success')
@@ -666,6 +696,7 @@ def forum():
             id = discuss.id
             if comment or len(comment) != 0:
                 comments_len = len(comment)
+
             if current_user.is_authenticated:
                 discuss.liked = Likes.query.filter_by(
                     id_author=current_user.id,
@@ -747,8 +778,47 @@ def add_post(post_type):
 def accept(contentType, id):
     if contentType == 'post':
         post = Posts.query.filter_by(id=id).first()
-        post.status = 'moderated' 
+        post.status = 'moderated'
         db.session.commit()
+        new_notice = Notification(user_id=post.id_author, from_user_id=current_user.id,
+                                  post_id=post.id, type="ваш пост был принят!", message="ваш пост был принят!")
+        db.session.add(new_notice)
+        db.session.commit()
+    elif contentType == 'discuss':
+        discuss = Discuss.query.filter_by(id=id).first()
+        discuss.status = 'moderated'
+        db.session.commit()
+        new_notice = Notification(user_id=discuss.id_author, from_user_id=current_user.id,
+                                  discuss_id=discuss.id, type="accepted", message="ваша дискуссия была принята!")
+        db.session.add(new_notice)
+        db.session.commit()
+    else:
+        flash('Неизвестный тип контента.', 'danger')
+        return redirect(url_for('index'))
+    return redirect(url_for('moderate_posts'))
+
+
+@app.route('/deny/<contentType>/<int:id>', methods=['GET', 'POST'])
+def deny(contentType, id):
+    if contentType == 'post':
+        post = Posts.query.filter_by(id=id).first()
+        post.status = 'denied'
+        db.session.commit()
+        new_notice = Notification(user_id=post.id_author, from_user_id=current_user.id,
+                                  post_id=post.id, type="denied", message="В  аш пост был отклонен.")
+        db.session.add(new_notice)
+        db.session.commit()
+    elif contentType == 'discuss':
+        discuss = Discuss.query.filter_by(id=id).first()
+        discuss.status = 'denied'
+        db.session.commit()
+        new_notice = Notification(user_id=discuss.id_author, from_user_id=current_user.id,
+                                  discuss_id=discuss.id, type="denied", message="Ваша дискуссия была отклонена.")
+        db.session.add(new_notice)
+        db.session.commit()
+    else:
+        flash('Неизвестный тип контента.', 'danger')
+        return redirect(url_for('index'))
     return redirect(url_for('moderate_posts'))
 
 
@@ -866,14 +936,13 @@ def post(id):
             user_id=viewer_id
         ).first()
 
-        liked = Likes.query.filter_by(
-            id_author=current_user.id,
-            id_post=id
-        ).first() is not None
-        disliked = Dislikes.query.filter_by(
-            id_author=current_user.id,
-            id_post=id
-        ).first() is not None
+        if current_user.is_authenticated:
+            like = Likes.query.filter_by(
+                id_author=current_user.id, id_post=post.id).first()
+            post.liked = like is not None
+        else:
+            post.liked = False
+
     else:
         if 'session_id' not in session:
             session['session_id'] = str(uuid.uuid4())
@@ -947,7 +1016,7 @@ def like(contentType, id):
             else:
                 new_like = Likes(id_author=current_user.id, id_discuss=id)
                 new_notice = Notification(user_id=discuss.id_author, from_user_id=current_user.id,
-                                          discuss_id=discuss.id, type="понравилась ваша ветка!", message="")
+                                          discuss_id=discuss.id, type="liked", message="понравилась ваша ветка!")
                 discuss.rating += 1
                 db.session.add(new_like)
                 db.session.add(new_notice)
@@ -971,7 +1040,7 @@ def like(contentType, id):
             else:
                 new_like = Likes(id_author=current_user.id, id_post=id)
                 new_notice = Notification(user_id=post.id_author, from_user_id=current_user.id,
-                                          post_id=post.id, type="понравился ваш пост!", message="")
+                                          post_id=post.id, type="liked", message="понравился ваш пост!")
                 post.rating += 1
                 db.session.add(new_like)
                 db.session.add(new_notice)
@@ -999,7 +1068,7 @@ def report(id):
         if post:
             for moderator in moderators:
                 new_notice = Notification(user_id=moderator.id, from_user_id=current_user.id,
-                                          post_id=post.id, message="отправил жалобу на пост!", type=5)
+                                          post_id=post.id, message="отправил жалобу на пост!", type="report")
                 db.session.add(new_notice)
             db.session.commit()
             flash('Спасибо за помощь!', 'success')
@@ -1008,7 +1077,7 @@ def report(id):
         elif discuss:
             for moderator in moderators:
                 new_notice = Notification(user_id=moderator.id, from_user_id=current_user.id,
-                                          discuss_id=discuss.id, message="отправил жалобу на ветку!", type=5)
+                                          discuss_id=discuss.id, message="отправил жалобу на ветку!", type="report")
                 db.session.add(new_notice)
             db.session.commit()
             flash('Спасибо за помощь!', 'success')
@@ -1068,7 +1137,7 @@ def edit_post(id):
                     post.categories = categories
                     db.session.commit()
                     flash("Пост успешно изменен!", 'success')
-                    return redirect(url_for('forum'))
+                    return redirect(url_for('index'))
                 except Exception as e:
                     print(f"Не удалось изменить пост! Ошибка: {e}")
                     db.session.rollback()

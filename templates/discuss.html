@@ -48,12 +48,12 @@
                             {{ discuss.date }}</a>
                         {% if current_user.is_authenticated %}
                         <div class="d-flex align-items-center">
-                            <form class="like-form" data-id="{{ post.id }}" data-type="post">
+                            <form class="like-form" data-id="{{ discuss.id }}" data-type="discuss">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                 <button type="submit" class="btn-unstyled button-custom px-2 like-button"
                                     title="Нравится">
-                                    <img id="like-icon-{{ post.id }}" class="like-icon"
-                                        src="/static/{% if post.liked %}like_filled.svg{% else %}like.svg{% endif %}">
+                                    <img id="like-icon-{{ discuss.id }}" class="like-icon"
+                                        src="/static/{% if discuss.liked %}like_filled.svg{% else %}like.svg{% endif %}">
                                     <span class="mt-2 text-reset font-mine">Нравится</span>
                                 </button>
                             </form>
@@ -67,10 +67,10 @@
                                 <img src="/static/delete.svg" class="report-icon">
                                 <span class="mt-2 text-reset font-mine">Удалить</span>
                             </a>
-                            <form method="post" action="/edit_post/{{ post.id }}">
+                            <form method="post" action="/edit_discuss/{{ discuss.id }}">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-                                <input type="hidden" name="post_id" value="{{ current_user.id }}" />
-                                <input type="hidden" name="post_id" value="{{ post.id }}" />
+                                <input type="hidden" name="user_id" value="{{ current_user.id }}" />
+                                <input type="hidden" name="discuss_id" value="{{ discuss.id }}" />
                                 <button
                                     class="btn-unstyled text-secondary text-decoration-none button-custom px-2 font-mine report-button"
                                     type="submit">
@@ -78,34 +78,6 @@
                                     <span class="mt-2 text-reset font-mine">Изменить</span>
                                 </button>
                             </form>
-                        </div>
-                        <div class="d-flex flex-row gap-2">
-                            <div class="div-glass div-glass-primary">
-                                <form class="like-form" data-id="{{ discuss.id }}" data-type="discuss">
-                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                    <button type="submit" class="btn-unstyled me-1" title="Нравится">
-                                        <img id="like-icon-{{ discuss.id }}"
-                                            src="/static/{% if liked %}like_filled.svg{% else %}like.svg{% endif %}">
-                                        <span id="rating-{{ discuss.id }}" class="ms-2 mt-2">{{ discuss.rating }}</span>
-                                    </button>
-                                </form>
-                            </div>
-
-                            {% if current_user.id == discuss.id_author or current_user.username == 'Whyiok' %}
-                            <form method="post" action="/edit_post/{{ discuss.id }}">
-                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-                                <input type="hidden" name="post_id" value="{{ current_user.id }}" />
-                                <input type="hidden" name="post_id" value="{{ discuss.id }}" />
-                                <button type="submit" class="btn-glass btn-glass-primary" title="Изменить">
-                                    <img id="edit-post-{{ discuss.id }}" src="/static/edit.svg">
-                                </button>
-                            </form>
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-                            <input type="hidden" name="post_id" value="{{ current_user.id }}" />
-                            <input type="hidden" name="post_id" value="{{ discuss.id }}" />
-                            <button type="button" class="btn-glass btn-glass-primary" title="Удалить"
-                                data-bs-toggle="modal" data-bs-target="#staticBackdrop">⨉</button>
-                            {% endif %}
                         </div>
                         <hr class="my-3">
                         <div>

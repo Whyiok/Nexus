@@ -33,6 +33,10 @@ footer {
     border: none !important;
 }
 
+.dropdown-item {
+    transition: 0.3s all;
+}
+
 /* Фон с затемнением */
 body::before {
     content: '';
@@ -251,6 +255,16 @@ hr {
     font-size: 4rem;
 }
 
+.br-top {
+    border: transparent;
+    border-radius: 15px 15px 0 0;
+}
+
+.br-bottom {
+    border: transparent;
+    border-radius: 0 0 15px 15px;
+}
+
 /* Общие стили */
 li {
     font-family: "Unbounded", sans-serif;
@@ -258,10 +272,6 @@ li {
     padding-left: 0;
     color: white;
     transition: color 0.3s ease;
-}
-
-li:hover {
-    color: #6f42c1;
 }
 
 .text-secondary {
@@ -724,4 +734,13 @@ select:focus {
 
 .link-custom:hover {
     text-decoration: underline;
+}
+/* Dropdown уведомлений с grid layout */
+.dropdown-menu.notifications-dropdown {
+    display: none;
+    grid-template-rows: auto 1fr auto;
+}
+
+.dropdown-menu.notifications-dropdown.show {
+    display: grid;
 }
