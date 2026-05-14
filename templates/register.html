@@ -58,7 +58,7 @@
                         <span class="font-classic ms-2"
                             style="background: linear-gradient(45deg, #6f42c1, #a855f7, #d946ef); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-size: 2rem; user-select: none;">РЕГИСТРАЦИЯ</span>
                     </div>
-                    <form method="POST" action="/send_email">
+                    <form method="POST" action="/send_email" data-type="register">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <div class="d-flex flex-column gap-2">
                             <div>

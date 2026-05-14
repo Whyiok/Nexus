@@ -1,3 +1,7 @@
+function changeUrl() {
+    history.pushState({ page: 'profile' }, '', '/user/123');
+    // Здесь можно обновить контент через fetch
+}
 document.addEventListener('DOMContentLoaded', function () {
     // Like forms (unified handler)
     document.querySelectorAll('.like-form').forEach(form => {
@@ -241,7 +245,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 const email = document.getElementById('email').value.trim();
                 const password = document.getElementById('password').value.trim();
             }
-            
+
             const formData = new FormData(form);
 
             fetch(`/send_email/${verifyType}`, {

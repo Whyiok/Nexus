@@ -143,8 +143,10 @@
                         <hr class="dropdown-divider">
                         {% if notifications %}
                         {% for notification in notifications %}
-                        <div class="dropdown-item text-start d-flex flex-column" style="height: 75px; text-decoration: none;" href="#">
-                            <a class="d-flex flex-row align-items-start text-decoration-none" href="/post/{{ notification.post_id }}">
+                        <div class="dropdown-item text-start d-flex flex-column"
+                            style="height: 75px; text-decoration: none;" href="#">
+                            <a class="d-flex flex-row align-items-start text-decoration-none"
+                                href="/post/{{ notification.post_id }}">
                                 <img src="/static/avatars/{{ notification.author.avatar }}" height="25" width="25"
                                     style="border-radius: 50%; margin-right: 10px;">
                                 <div class="flex-grow-1">
@@ -152,7 +154,7 @@
                                         {{ notification.author.username if notification.author else 'Неизвестно' }} {{
                                         notification.message }}
                                     </p>
-                                    
+
                                 </div>
                             </a>
                             <span class="text-secondary fs-6">{{ notification.date.strftime('%d.%m.%Y %H:%M') }}</span>
@@ -163,7 +165,8 @@
                         {% endif %}
                         <div>
                             <hr class="dropdown-divider m-0">
-                            <a class="dropdown-item text-center pb-2 br-bottom" href="/notifications">Все уведомления</a>
+                            <a class="dropdown-item text-center pb-2 br-bottom" href="/notifications">Все
+                                уведомления</a>
                         </div>
                     </ul>
                 </li>
@@ -296,6 +299,7 @@
         padding-top: 15px;
         padding-bottom: 15px;
     " class="mt-5 d-flex">
+        <button onclick="changeUrl()">Сменить URL</button>
         <div class="d-flex flex-row gap-5">
             <div>
                 <a style="text-decoration: none; color: rgba(255,255,255,0.7);" class="fw-bold">Основное</a>
