@@ -43,9 +43,8 @@
                         <div style="color: rgba(255,255,255,0.8); font-size: 1.1rem; line-height: 1.6;">{{ discuss.text
                             }}
                         </div>
-                        <a style="font-size: 0.9rem;"
-                            class="text-secondary fst-italic my-2 text-decoration-none">Опубликовано:
-                            {{ discuss.date }}</a>
+                        <a style="font-size: 0.9rem;" class="text-secondary my-2 text-decoration-none">Опубликовано:
+                            {{ discuss.date.strftime('%d.%m.%Y %H:%M') }}</a>
                         {% if current_user.is_authenticated %}
                         <div class="d-flex align-items-center">
                             <form class="like-form" data-id="{{ discuss.id }}" data-type="discuss">
@@ -62,12 +61,13 @@
                                 <img src="/static/report.svg" class="report-icon">
                                 <span class="mt-2 text-reset font-mine">Жалоба</span>
                             </a>
+                            {% if current_user.id == discuss.id_author or current_user.is_moderator %}
                             <a class="btn-unstyled text-secondary text-decoration-none button-custom px-2 font-mine report-button"
                                 data-bs-toggle="modal" data-bs-target="#deleteBackdrop">
                                 <img src="/static/delete.svg" class="report-icon">
                                 <span class="mt-2 text-reset font-mine">Удалить</span>
                             </a>
-                            <form method="post" action="/edit_discuss/{{ discuss.id }}">
+                            <form method="post" action="/edit/discuss/{{ discuss.id }}">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
                                 <input type="hidden" name="user_id" value="{{ current_user.id }}" />
                                 <input type="hidden" name="discuss_id" value="{{ discuss.id }}" />
@@ -78,11 +78,16 @@
                                     <span class="mt-2 text-reset font-mine">Изменить</span>
                                 </button>
                             </form>
+                            {% endif %}
                         </div>
                         <hr class="my-3">
                         <div>
-                            <a href="/user/{{ user_a.id }}" class="link-custom fs-5 font"><img
-                                    src="/static/avatars/{{ user_a.avatar }}" height="30"> {{ user_a.username }}</a>
+                            <a href="/user/{{ user_a.id }}" class="link-custom fs-5 font"><img style="
+                        width: 44px;
+                        height: 44px;
+                        border-radius: 50%;
+                        object-fit: cover;
+                        object-position: center;" src="/static/avatars/{{ user_a.avatar }}"> {{ user_a.username }}</a>
                         </div>
                         <hr class="my-3">
                         <div>

@@ -81,11 +81,11 @@
                                 <div style="padding: 15px; flex: 1; display: flex; flex-direction: column;">
                                     <hr class="p-1">
                                     <a style="color: white; font-family: 'Unbounded', sans-serif;"
-                                        class="fw-bold text-decoration-none fs-5 text-start" title="Заголовок"
+                                        class="fw-bold text-decoration-none fs-6 text-start" title="Заголовок"
                                         href="/post/{{ post.id }}">{{
                                         post.title }}</a>
                                     <a style="font-family: 'Unbounded', sans-serif;" title="Тип поста"
-                                        class="fw-bold text-decoration-none fs-7 {% if post.type == 'exclusive' %}text-golden{% else %}text-secondary{% endif %} text-start">{%
+                                        class="fw-bold text-decoration-none fs-6 {% if post.type == 'exclusive' %}text-golden{% else %}text-secondary{% endif %} text-start">{%
                                         if post.type == 'article' %}Статья{% elif post.type == 'server_java' %}Java
                                         сервер{% elif post.type == 'server_bedrock' %}Bedrock сервер{% elif post.type ==
                                         'texture_pack' %}Текстур пак{% elif post.type == 'exclusive' %}Эксклюзивный{%

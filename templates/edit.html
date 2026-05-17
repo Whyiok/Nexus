@@ -34,6 +34,11 @@
         align-items: center;
         padding-top: 15px;
     ">
+        <h1 class="font">{%if post.type == 'article'%}Изменение статьи
+                    {%elif post.type == 'server_java'%}Изменение Java сервера
+                    {%elif post.type == 'server_bedrock'%}Изменение Bedrock сервера
+                    {%elif post.type == 'texture_pack'%}Изменение текстур пака
+                    {% elif editType == 'discuss' %}Изменение дискуссии{%endif%}</h1>
         <form method="POST" enctype="multipart/form-data">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="m-3 w-25 col-auto">
@@ -42,7 +47,7 @@
                 <input type="text" name="title" value="{{ post.title }}" class="btn-glass btn-glass-outline font" style="width: 500px;" maxlength="80"
                        required>
             </div>
-
+            {% if editType == 'post' %}
             <div class="m-3 w-25 col-auto">
                 <label class="form-label btn-glass btn-glass-primary font d-block text-center"
                        style="color: white; font-weight: 500; width: 220px;">Картинка</label>
@@ -54,7 +59,7 @@
                     </label>
                 </div>
             </div>
-
+            {% endif %}
             <div class="m-3 w-25 col-auto">
                 <label class="form-label btn-glass btn-glass-primary font d-block text-center"
                        style="color: white; font-weight: 500; width: 220px;">Новый текст</label>

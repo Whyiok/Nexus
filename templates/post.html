@@ -119,14 +119,14 @@
                                     <img src="/static/report.svg" class="report-icon">
                                     <span class="mt-2 text-reset font-mine">Жалоба</span>
                                 </a>
-                                {% if current_user.id == post.id_author or current_user.username == 'Whyiok' %}
+                                {% if current_user.id == post.id_author or current_user.is_moderator %}
                                 <div class="d-flex align-items-center">
                                     <a class="btn-unstyled text-secondary text-decoration-none button-custom px-2 font-mine report-button"
                                         data-bs-toggle="modal" data-bs-target="#deleteBackdrop">
                                         <img src="/static/delete.svg" class="report-icon">
                                         <span class="mt-2 text-reset font-mine">Удалить</span>
                                     </a>
-                                    <form method="post" action="/edit_post/{{ post.id }}">
+                                    <form method="post" action="/edit/post/{{ post.id }}">
                                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
                                         <input type="hidden" name="post_id" value="{{ current_user.id }}" />
                                         <input type="hidden" name="post_id" value="{{ post.id }}" />

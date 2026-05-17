@@ -265,6 +265,11 @@ hr {
     border-radius: 0 0 15px 15px;
 }
 
+.br {
+    border: transparent;
+    border-radius: 15px;
+}
+
 /* Общие стили */
 li {
     font-family: "Unbounded", sans-serif;

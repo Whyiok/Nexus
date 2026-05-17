@@ -283,11 +283,10 @@ def notifications():
     id = user.id
     notifications = Notification.query.filter_by(user_id=id).limit(3).all()
     if notifications:
-        notice_author = ''
         for notification in notifications:
-            notice_author = notification.from_user_id
-        return render_template('notifications.html', notifications=notifications, notice_author=notice_author)
-    return render_template('index.html')
+            notification.author = notification.from_user_id
+        return render_template('notifications.html', notifications=notifications)
+    return render_template('notifications.html')
 
 
 @app.route('/mark_notice', methods=['POST'])
@@ -316,67 +315,83 @@ def send_email(verifyType):
         username = request.form.get('username', '')
         password = request.form.get('password', '')
         edition = request.form.get('version', 'java')
-        
-        user = User.query.filter_by(email=email).first()
 
-        if user is None:
-            flash('Такого пользователя не существует', 'danger')
-            return redirect("/login")
-        
         if not email:  # Если нет почты
             print("Почта не введена!")
-            return redirect(url_for('register'))
-        else:
-            # Добавление данных в сессию
-            session["email"] = email
-            session["username"] = username
-            session["password"] = password
-            session["edition"] = edition
-            
-            Email_cods.query.filter_by(email=email).delete() # Удаление прошлого кода верификации
-            db.session.commit()
-            
-            code = generate_code()  # Генерация кода
-            
-            new_code = Email_cods(email, code, False)
-            code_verify = Email_cods.query.filter_by(
-                email=email, is_activated=True).first()
-            if verifyType == 'login':
-                if check_password_hash(user.hash_password, password):
-                    pass
-                else:
-                    flash('Неверный пароль!')
-                    return '', 204
-            
-            if code_verify:
-                db.session.delete(code_verify)
-                db.session.commit()
-            else:
-                db.session.add(new_code)  # Добавление кода в бд
-                db.session.commit()  # Подтверждение
-                
-            if verifyType == 'login':
-                user = User.query.filter_by(email=email).first()
-                username = user.username if user else "пользователь"
-                msg = Message(
-                    subject="Nexus MC: Код подтверждения",
-                    recipients=[email],
-                    body=f'''Привет, {username}.
-            Мы получили запрос на вход в ваш аккаунт
-            Подтвердите свою Электронную почту введя код снизу в поле ввода.
-            {code}'''
-                )  # Шаблон для Email
-            elif verifyType == 'register':
-                                msg = Message(
-                    subject="Nexus MC: Код подтверждения",
-                    recipients=[email],
-                    body=f'''Привет, {username}.
-            Вы регистрируетесь на Nexus MC!
-            Подтвердите свою Электронную почту введя код снизу в поле ввода.
-            {code}'''
-                )  # Шаблон для Email
+            flash('Введите email', 'danger')
+            return redirect(url_for('register' if verifyType == 'register' else 'login'))
 
-            mail.send(msg)  # Отправление Email
+        # Для логина проверяем существование пользователя
+        if verifyType == 'login':
+            user = User.query.filter_by(email=email).first()
+            if user is None:
+                flash('Такого пользователя не существует', 'danger')
+                return redirect("/login")
+
+        # Для регистрации проверяем, не занят ли email
+        elif verifyType == 'register':
+            user = User.query.filter_by(email=email).first()
+            if user:
+                flash('Этот email уже зарегистрирован', 'danger')
+                return redirect("/register")
+
+        # Добавление данных в сессию
+        session["email"] = email
+        session["username"] = username
+        session["password"] = password
+        session["edition"] = edition
+
+        # Удаляем старые коды для этого email
+        old_codes = Email_cods.query.filter_by(email=email).all()
+        for old_code in old_codes:
+            db.session.delete(old_code)
+
+        # Генерация нового кода
+        code = generate_code()
+
+        new_code = Email_cods(email, code, False)
+        db.session.add(new_code)
+        db.session.commit()
+
+        code_verify = Email_cods.query.filter_by(
+            email=email, is_activated=True).first()
+
+        if verifyType == 'login':
+            if check_password_hash(user.hash_password, password):
+                return 'Пароль введен верно.', 204
+            else:
+                flash('Неверный пароль!')
+                return redirect(url_for('login'))
+
+        if code_verify:
+            db.session.delete(code_verify)
+            db.session.commit()
+        else:
+            db.session.add(new_code)  # Добавление кода в бд
+            db.session.commit()  # Подтверждение
+
+        if verifyType == 'login':
+            user = User.query.filter_by(email=email).first()
+            username = user.username if user else "пользователь"
+            msg = Message(
+                subject="Nexus MC: Код подтверждения",
+                recipients=[email],
+                body=f'''Привет, {username}.
+        Мы получили запрос на вход в ваш аккаунт
+        Подтвердите свою Электронную почту введя код снизу в поле ввода.
+        {code}'''
+            )  # Шаблон для Email
+        elif verifyType == 'register':
+            msg = Message(
+                subject="Nexus MC: Код подтверждения",
+                recipients=[email],
+                body=f'''Привет, {username}.
+        Вы регистрируетесь на Nexus MC!
+        Подтвердите свою Электронную почту введя код снизу в поле ввода.
+        {code}'''
+            )  # Шаблон для Email
+
+        mail.send(msg)  # Отправление Email
 
         return '', 204
 
@@ -436,16 +451,20 @@ def index():
     return render_template("index.html", posts=posts, comments_len=comments_len)
 
 
-@app.route('/moderate_posts')
-def moderate_posts():
+@app.route('/moderate/<moderateType>')
+def moderate(moderateType):
     if current_user.is_moderator:
         posts = Posts.query.filter_by(status='on_moderating').all()
-        if posts:
-            for post in posts:
-                comment = Comments.query.filter_by(id_post=post.id).all()
-                post.author = User.query.get(post.id_author)
-                comments_len = len(comment)
-        return render_template("moderate_posts.html", posts=posts)
+        discusses = Discuss.query.filter_by(status='on_moderating').all()
+
+        for post in posts:
+            post.author = User.query.get(post.id_author)
+
+        for discuss in discusses:
+            discuss.author = User.query.get(discuss.id_author)
+
+        return render_template("moderate_posts.html", posts=posts, discusses=discusses, moderateType=moderateType)
+
     else:
         return redirect(url_for('index'))
 
@@ -467,21 +486,21 @@ def register():
     email = session.get("email")
     password = session.get("password")
     edition = session.get("edition")
-    
+
     # Если каких-то данных нет, перенаправляем на регистрацию
     if not all([username, email, password, edition]):
         flash("Пожалуйста, заполните форму регистрации сначала", 'danger')
         return redirect(url_for('register'))
-    
+
     print(email, username)
 
     # Получение проверочного кода из формы в модальном окне
     verify_code = request.form.get('verify_code')
-    
-    user = User.query.filter_by(username=username).first()
+
+    user = User.query.filter_by(username=username, email=email).first()
 
     if user:
-        flash('Имя пользователя занято!', 'danger')
+        flash('Почта или имя пользователя уже используется!', 'danger')
         return redirect("/register")
 
     elif len(username) < 4:
@@ -520,25 +539,26 @@ def register():
 def login():
 
     # Берем данные из сессии
-    email = session['email']
-    password = session['password']
-    print(email, password)
+    username = session.get("username")
+    email = session.get("email")
+    password = session.get("password")
+    edition = session.get("edition")
 
     # Получение проверочного кода из формы в модальном окне
     verify_code = request.form.get('verify_code')
-    
+
     if request.method == "GET":
 
         if current_user.is_authenticated:  # Проверка на авторизацию
             flash("Вы уже авторизованы", 'warning')
             return redirect("/")
 
-        return render_template("login.html")
-    
+        return render_template("login.html", email=email, password=password)
+
     if not email or not password:
         flash('Пожалуйста, введите email и пароль', 'danger')
         return redirect("/login")
-    
+
     user = User.query.filter_by(email=email).first()
 
     if user is None:
@@ -553,13 +573,8 @@ def login():
             code = code_entry.code
         else:
             flash('Код не найден или уже активирован!', 'danger')
-            return redirect("/register")
+            return redirect("/login")
     if code == verify_code:
-        hash_pwd = generate_password_hash(password)
-        new_user = User(username, email, hash_pwd, edition)
-        db.session.add(new_user)
-        db.session.commit()
-        user = db.session.get(User, new_user.id)
         login_user(user)
         session.permanent = True
         code_entry.is_activated = True
@@ -569,7 +584,7 @@ def login():
 
     else:
         flash("Неверный код!", 'danger')
-        return redirect("/register")
+        return redirect("/login")
 
     flash("Неверный логин или пароль!", 'danger')
     return render_template("login.html", email=email, password=password)
@@ -693,11 +708,11 @@ def comment(contentType, id):
                 if len(text) > 500:
                     flash("Недопустимый запрос.", 'danger')
                     return redirect(url_for("index"))
-                new_notice = Notification(user_id=discuss.id_author, from_user_id=current_user.id,
-                                            discuss_id=discuss.id, type="reply", message="прокомментировал ваш пост!")
+                new_notice = Notification(user_id=post.id_author, from_user_id=current_user.id,
+                                          post_id=post.id, type="reply", message="прокомментировал ваш пост!")
                 new_comment = Comments(
                     id_author=current_user.id, id_post=post_id, comment=text)
-                db.session.add(new_notification)
+                db.session.add(new_notice)
                 db.session.add(new_comment)
                 db.session.commit()
                 flash("Комментарий добавлен!", 'success')
@@ -711,7 +726,7 @@ def comment(contentType, id):
                     flash("Недопустимый запрос.", 'danger')
                     return redirect(url_for('forum'))
                 new_notice = Notification(user_id=discuss.id_author, from_user_id=current_user.id,
-                                            discuss_id=discuss.id, type="reply", message="ответил на вашу дискуссию!")
+                                          discuss_id=discuss.id, type="reply", message="ответил на вашу дискуссию!")
                 new_comment = Comments(
                     id_author=current_user.id, id_discuss=discuss_id, comment=text)
                 db.session.add(new_notice)
@@ -737,25 +752,24 @@ def forum():
         error_out=False
     )
     discusses = pagination.items
-    author = None
     comments_len = 0
     if len(discusses) != 0:
         for discuss in discusses:
-            author = User.query.get(discuss.id_author)
+            discuss.author = User.query.get(discuss.id_author)
             comment = Comments.query.filter_by(id_discuss=discuss.id).all()
-            id = discuss.id
+
             if comment or len(comment) != 0:
                 comments_len = len(comment)
 
             if current_user.is_authenticated:
                 discuss.liked = Likes.query.filter_by(
                     id_author=current_user.id,
-                    id_discuss=id
+                    id_discuss=discuss.id
                 ).first() is not None
             else:
                 discuss.liked = False
 
-    return render_template("forum.html", discusses=discusses, author=author, pagination=pagination, comments_len=comments_len)
+    return render_template("forum.html", discusses=discusses, pagination=pagination, comments_len=comments_len)
 
 
 @app.route('/add_post/<post_type>', methods=['GET', 'POST'])
@@ -834,6 +848,8 @@ def accept(contentType, id):
                                   post_id=post.id, type="ваш пост был принят!", message="ваш пост был принят!")
         db.session.add(new_notice)
         db.session.commit()
+        flash('Пост успешно одобрен!', 'success')
+        return redirect(url_for('moderate', moderateType='posts'))
     elif contentType == 'discuss':
         discuss = Discuss.query.filter_by(id=id).first()
         discuss.status = 'moderated'
@@ -842,10 +858,12 @@ def accept(contentType, id):
                                   discuss_id=discuss.id, type="accepted", message="ваша дискуссия была принята!")
         db.session.add(new_notice)
         db.session.commit()
+        flash('Дискуссия успешно одобрена!', 'success')
+        return redirect(url_for('moderate', moderateType='discusses'))
     else:
         flash('Неизвестный тип контента.', 'danger')
         return redirect(url_for('index'))
-    return redirect(url_for('moderate_posts'))
+
 
 
 @app.route('/deny/<contentType>/<int:id>', methods=['GET', 'POST'])
@@ -858,6 +876,8 @@ def deny(contentType, id):
                                   post_id=post.id, type="denied", message="В  аш пост был отклонен.")
         db.session.add(new_notice)
         db.session.commit()
+        flash('Пост успешно отклонен.', 'success')
+        return redirect(url_for('moderate', moderateType='posts'))
     elif contentType == 'discuss':
         discuss = Discuss.query.filter_by(id=id).first()
         discuss.status = 'denied'
@@ -866,6 +886,8 @@ def deny(contentType, id):
                                   discuss_id=discuss.id, type="denied", message="Ваша дискуссия была отклонена.")
         db.session.add(new_notice)
         db.session.commit()
+        flash('Дискуссия успешно отклонена.', 'success')
+        return redirect(url_for('moderate', moderateType='discusses'))
     else:
         flash('Неизвестный тип контента.', 'danger')
         return redirect(url_for('index'))
@@ -1142,23 +1164,28 @@ def report(id):
         return redirect('/login')
 
 
-@app.route('/edit_post/<int:id>', methods=['GET', 'POST'])
-def edit_post(id):
+@app.route('/edit/<editType>/<int:id>', methods=['GET', 'POST'])
+def edit(editType, id):
     if current_user.is_authenticated:
         if request.method == 'POST':
-            file = request.files.get('image')
-            title = request.form.get('title')
-            text = request.form.get('text')
-            post = Posts.query.get(id)
+            if editType == 'post':
+                title = request.form.get('title')
+                text = request.form.get('text')
+                file = request.files.get('image')
+                post = Posts.query.get(id)
+                categories = request.form.getlist('categories')
 
-            categories = request.form.getlist('categories')
+            elif editType == 'discuss':
+                title = request.form.get('title')
+                text = request.form.get('text')
+                discuss = Discuss.query.get(id)
+                categories = request.form.getlist('categories')
 
             if title == '' or text == '':
                 flash("Недопустимый запрос.", 'danger')
-                return redirect(url_for('add_post'))
+                return redirect(url_for('edit', editType=editType, id=id))
             else:
                 try:
-                    image_data = None
                     if file and file.filename != '':
                         if not allowed_file(file.filename):
                             flash(
@@ -1179,19 +1206,27 @@ def edit_post(id):
                     else:
                         print("Файл не загружен.")
 
-                        image_data = None
-                    post = Posts.query.filter_by(id=id).first()
-                    post.title = title
-                    post.text = text
-                    post.image_name = file.filename
-                    post.categories = categories
-                    db.session.commit()
-                    flash("Пост успешно изменен!", 'success')
-                    return redirect(url_for('index'))
+                    if editType == 'post':
+                        post = Posts.query.filter_by(id=id).first()
+                        post.title = title
+                        post.text = text
+                        post.image_name = file.filename
+                        post.categories = categories
+                        db.session.commit()
+                        flash("Пост успешно изменен! Ожидайте одобрения модерацией.", 'success')
+                        return redirect(url_for('index'))
+                    elif editType == 'discuss':
+                        discuss = Discuss.query.filter_by(id=id).first()
+                        discuss.title = title
+                        discuss.text = text
+                        discuss.categories = categories
+                        db.session.commit()
+                        flash("Дискуссия успешно изменена! Ожидайте одобрения модерацией.", 'success')
+                        return redirect(url_for('index'))
                 except Exception as e:
-                    print(f"Не удалось изменить пост! Ошибка: {e}")
+                    print(f"Не удалось изменить пост или дискуссю! Ошибка: {e}")
                     db.session.rollback()
-        return render_template("edit_post.html", post=post)
+        return render_template("edit.html", post=post, discuss=discuss, editType=editType, id=id)
     else:
         flash("Войдите в аккаунт!", 'danger')
         return redirect(url_for('login'))

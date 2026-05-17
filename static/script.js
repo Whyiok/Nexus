@@ -1,7 +1,34 @@
-function changeUrl() {
-    history.pushState({ page: 'profile' }, '', '/user/123');
-    // Здесь можно обновить контент через fetch
+function selectDiscuss() {
+    history.pushState({ page: 'profile' }, '', '/moderate/discusses');
+    const posts = document.getElementById('posts');
+    const discusses = document.getElementById('discusses');
+    if (posts && discusses) {
+        console.log('Посты и дискуссии найдены!')
+            posts.hidden = true;
+            discusses.hidden = false;  
+    }
 }
+
+function selectPosts() {
+    history.pushState({ page: 'profile' }, '', '/moderate/posts');
+    const posts = document.getElementById('posts');
+    const discusses = document.getElementById('discusses');
+    if (posts && discusses) {
+        console.log('Посты и дискуссии найдены!')
+            posts.hidden = false;
+            discusses.hidden = true;  
+    }
+}
+
+const currentUrl = window.location.pathname;
+
+if  (currentUrl === '/moderate/discusses') {
+    const posts = document.getElementById('posts');
+    const discusses = document.getElementById('discusses');
+    posts.hidden = true;
+    discusses.hidden = false;  
+}
+
 document.addEventListener('DOMContentLoaded', function () {
     // Like forms (unified handler)
     document.querySelectorAll('.like-form').forEach(form => {
