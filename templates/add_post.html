@@ -7,8 +7,7 @@
 {% block main %}
 <main style="margin-top: 25px;">
     <div class="nav col-auto mb-2 justify-content-center mb-md-0 p-2" style="margin-top: 80px;">
-        <a class="btn-glass btn-glass-outline font p-0 dropdown btn"
-           style="
+        <a class="btn-glass btn-glass-outline font p-0 dropdown btn" style="
                         position: absolute;
                         right: 20px;
                         top: 85px;
@@ -18,11 +17,8 @@
                         background-size: 20px;
                         background-repeat: no-repeat;
                         background-position: center;
-                        border-radius: 50%;"
-
-           data-bs-toggle="popover" data-bs-title="Правила"
-           data-bs-html="true"
-           data-bs-content="1. Тема всех постов должна относиться к игре Minecraft.&lt;br&gt;
+                        border-radius: 50%;" data-bs-toggle="popover" data-bs-title="Правила" data-bs-html="true"
+            data-bs-content="1. Тема всех постов должна относиться к игре Minecraft.&lt;br&gt;
                             2. Нецензурные слова запрещены.&lt;br&gt;
                             3. Вставки ссылок на другие ресурсы с целью рекламы запрещены.">
         </a>
@@ -34,77 +30,105 @@
         align-items: center;
         padding-top: 15px;
     ">
-    <h1 class="font">{%if post_type=='article'%}Добавление статьи
-                    {%elif post_type=='server_java'%}Добавление Java сервера
-                    {%elif post_type=='server_bedrock'%}Добавление Bedrock сервера
-                    {%elif post_type=='texture_pack'%}Добавление текстур пака{%endif%}</h1>
-        <form method="POST" enctype="multipart/form-data">
+        <h1 class="font">{%if post_type=='article'%}Добавление статьи
+            {%elif post_type=='server_java'%}Добавление Java сервера
+            {%elif post_type=='server_bedrock'%}Добавление Bedrock сервера
+            {%elif post_type=='texture_pack'%}Добавление текстур пака
+            {%elif post_type=='mod'%}Добавление мода{%endif%}</h1>
+<form method="POST" enctype="multipart/form-data">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="m-3 w-25 col-auto">
                 <label class="form-label btn-glass btn-glass-primary font"
-                       style="color: white; font-weight: 500; width: 9.7rem; padding-left: auto;">Заголовок</label>
-                <input type="text" name="title" class="btn-glass btn-glass-outline" style="width: 500px;" maxlength="80"
-                       required>
+                    style="color: white; font-weight: 500; width: 9.7rem; padding-left: auto;">Заголовок</label>
+                <input type="text" name="title" class="btn-glass btn-glass-outline font" style="width: 500px;" maxlength="80"
+                    required>
             </div>
 
             <div class="m-3 w-25 col-auto">
-                <label class="form-label btn-glass btn-glass-primary font"
-                       style="color: white; font-weight: 500; width: 150px; padding-left: 30px;">Картинка</label>
+                <label class="form-label btn-glass btn-glass-primary font d-block text-center"
+                    style="color: white; font-weight: 500; width: 220px;">Обложка</label>
                 <div class="file-input-wrapper" style="width: 300px;">
-                    <input type="file" name="image" accept="image/*" id="fileInput" style="display: none;">
-                    <label for="fileInput" class="btn-glass btn-glass-outline font"
-                           style="width: 100%; justify-content: center; cursor: pointer;">
-                        Выберите файл
+                    <input type="file" name="thumbnail" accept="image/*" id="thumbnailInput" style="display: none;">
+                    <label for="thumbnailInput" class="btn-glass btn-glass-outline font"
+                        style="width: 100%; justify-content: center; cursor: pointer;">
+                        Выберите изображение
                     </label>
                 </div>
             </div>
 
             <div class="m-3 w-25 col-auto">
-                <label class="form-label btn-glass btn-glass-primary font"
-                       style="color: white; font-weight: 500; width: 150px; padding-left: 50px;">Текст</label>
-                <input type="text" name="text" class="btn-glass btn-glass-outline"
-                       style="width: 500px;" required>
+                <label class="form-label btn-glass btn-glass-primary font d-block text-center"
+                    style="color: white; font-weight: 500; width: 220px;">Файл</label>
+                <div class="file-input-wrapper">
+                    <div class="d-flex flex-row">
+                        <input type="file" name="file" accept=".zip,.rar,.7z" id="archiveInput" style="display: none;">
+                        <label for="archiveInput" class="btn-glass btn-glass-outline font" style="cursor: pointer;">
+                            Выберите файл
+                        </label>
+                        <p class="text-secondary font-small ms-1 text-nowrap">*Выберите архив вашего рп или датапака</p>
+                    </div>
+                </div>
             </div>
+
+            <div class="m-3 w-25 col-auto">
+                <label class="form-label btn-glass btn-glass-primary font d-block text-center"
+                    style="color: white; font-weight: 500; width: 220px;">Изображения для обзора</label>
+                <div class="file-input-wrapper" style="width: 300px;">
+                    <input type="file" id="imagesInput" name="images[]" accept="image/*" multiple style="display: none;">
+                    <label for="imagesInput" class="btn-glass btn-glass-outline font"
+                        style="width: 100%; justify-content: center; cursor: pointer;">
+                        Выберите изображения
+                    </label>
+                </div>
+            </div>
+            
+            <div class="m-3 w-25 col-auto">
+                <label class="form-label btn-glass btn-glass-primary font d-block text-center"
+                    style="color: white; font-weight: 500; width: 220px;">Видео (Ссылка)</label>
+                <div class="file-input-wrapper" style="width: 300px;">
+                    <input type="text" name="video_link"
+                        value="{% if editType == 'post' %}{{ post.text }}{% elif editType == 'discuss' %}{{ discuss.text }}{% endif %}"
+                        class="btn-glass btn-glass-outline font" style="width: 500px;">
+                </div>
+            </div>
+
+            <div class="m-3 w-25 col-auto">
+                <label class="form-label btn-glass btn-glass-primary font px-auto"
+                    style="color: white; font-weight: 500; width: 150px;">Описание</label>
+                <input type="text" name="text" class="btn-glass btn-glass-outline font" style="width: 500px;" required>
+            </div>
+            
             <div class="dropdown my-2 btn-glass btn-glass-outline" style="height: 3rem; padding: auto;">
                 <div class="form-check">
                     <input class="form-check-input" name="categories" type="checkbox" value="building">
-                    <label class="form-check-label">
-                        Строительство
-                    </label>
+                    <label class="form-check-label">Строительство</label>
                 </div>
                 <div class="form-check">
                     <input class="form-check-input" name="categories" type="checkbox" value="pvp">
-                    <label class="form-check-label">
-                        PvP
-                    </label>
+                    <label class="form-check-label">PvP</label>
                 </div>
                 <div class="form-check">
                     <input class="form-check-input" name="categories" type="checkbox" value="redstone">
-                    <label class="form-check-label">
-                        Редстоун
-                    </label>
+                    <label class="form-check-label">Редстоун</label>
                 </div>
                 <div class="form-check">
                     <input class="form-check-input" name="categories" type="checkbox" value="challenge">
-                    <label class="form-check-label">
-                        Челленджи
-                    </label>
+                    <label class="form-check-label">Челленджи</label>
                 </div>
             </div>
 
             <button type="submit" class="btn-glass btn-glass-primary mt-3 font mx-auto">
                 Опубликовать
             </button>
-
         </form>
     </div>
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             const fileLabel = document.querySelector('label[for="fileInput"]');
 
             if (fileLabel) {
                 // Отслеживаем клик по label
-                fileLabel.addEventListener('click', function() {
+                fileLabel.addEventListener('click', function () {
                     console.log('Клик по кнопке выбора файла');
                 });
             }
@@ -112,7 +136,7 @@
             // А сам input отслеживаем на изменение
             const fileInput = document.getElementById('fileInput');
             if (fileInput) {
-                fileInput.addEventListener('change', function(e) {
+                fileInput.addEventListener('change', function (e) {
                     const file = e.target.files[0];
                     if (file) {
                         // Создаем flash-сообщение

@@ -42,6 +42,9 @@
                         href="{{ url_for('add_post', post_type='texture_pack') }}"><img
                             src="/static/texture.svg">Текстур пак</a>
                     <a class="btn-glass btn-glass-outline font"
+                        href="{{ url_for('add_post', post_type='mod') }}"><img
+                            src="/static/mod.svg">Мод</a>
+                    <a class="btn-glass btn-glass-outline font"
                         href="{{ url_for('add_post', post_type='article') }}"><img src="/static/article.svg">Статья</a>
                     <a class="btn-glass btn-glass-outline font" href="/add_discuss"><img src="/static/forum.png">Ветка
                         на форуме</a>
@@ -67,23 +70,11 @@
                         </a>
                     </li>
                     <li class="nav-item dropdown">
-                        <a href="/news" class="nav-link-glass d-flex align-items-center font" style="height: 48px;"
-                            role="button" title="Новости" data-bs-toggle="dropdown" data-bs-auto-close="false"
-                            aria-expanded="false">
+                        <a href="/news_nexus" class="nav-link-glass d-flex align-items-center font" style="height: 48px;" title="Новости">
                             <img src="/static/news.png" style="margin-right: 5px; height: 18px;">
                             Новости
                             <span class="nav-indicator"></span>
                         </a>
-
-                        <ul class="dropdown-menu" style="width: 280px; min-width: 250px;">
-                            <span class="font ms-3">Выберите тип новостей:</span>
-                            <li>
-                                <hr class="dropdown-divider">
-                            </li>
-                            <li><a class="dropdown-item" href="/news_nexus">Nexus</a></li>
-                            <li><a class="dropdown-item" href="/light_theme">Minecraft</a></li>
-                        </ul>
-                    </li>
                     <li class="nav-item">
                         <a href="/servers" class="nav-link-glass d-flex align-items-center font" title="Сервера"
                             style="height: 48px;">
@@ -97,13 +88,13 @@
 
 
             <div class="d-flex flex-row gap-3 ms-auto align-items-center me-3">
-                <!-- Поиск -->
+                <!--           
                 <div class="search-glass d-flex align-items-center font" style="height: 44px; width: 250px;">
                     <img src="/static/search.svg" style="margin-left: 10px; margin-right: 5px; height: 18px;">
                     <input type="text" placeholder="Поиск..."
                         style="height: 100%; background: transparent; border: none; color: white; outline: none; width: 100%;"
                         title="Поиск">
-                </div>
+                </div>-->
                 {% if current_user.is_authenticated %}
                 {% if current_user.is_moderator %}
                 <a href="/moderate/posts" class="btn-glass btn-glass-outline font p-0" style="
@@ -145,13 +136,13 @@
                         {% for notification in notifications %}
                         <div class="dropdown-item text-start d-flex flex-column"
                             style="height: 75px; text-decoration: none;" href="#">
-                            <a class="d-flex flex-row align-items-start text-decoration-none"
+                            <a class="d-flex flex-row align-items-start text-decoration-none link-custom"
                                 href="/post/{{ notification.post_id }}">
                                 <img src="/static/avatars/{{ notification.author.avatar }}" height="25" width="25"
                                     style="border-radius: 50%; margin-right: 10px;">
                                 <div class="flex-grow-1">
                                     <p class="mb-1">
-                                        {{ notification.author.username if notification.author else 'Неизвестно' }} {{
+                                        {% if notification.type != 'accepted' and notification.type != 'denied' %} {{ notification.author.username }} {% endif %} {{
                                         notification.message }}
                                     </p>
 

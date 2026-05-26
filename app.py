@@ -14,6 +14,7 @@ from dotenv import load_dotenv
 from flask_wtf import CSRFProtect
 from flask import jsonify
 import uuid
+import json
 
 load_dotenv()
 
@@ -64,6 +65,10 @@ class User(db.Model, UserMixin):  # Пользователи
     is_admin = db.Column(db.Boolean, default=False)
     is_checked = db.Column(db.Boolean, default=False)
     is_banned = db.Column(db.Boolean, default=False)
+    exp = db.Column(db.Integer, default=0)
+    level = db.Column(db.String, default='Новичок')
+    clan = db.Column(db.Integer, nullable=True)
+    friends = db.Column(db.JSON, nullable=True)
     banned_until = db.Column(db.DateTime, nullable=True)
     permanent_ban = db.Column(db.Boolean, nullable=True)
     ban_reason = db.Column(db.String(500), nullable=True)
@@ -109,6 +114,7 @@ class Notification(db.Model):
     message = db.Column(db.String(200))
     is_read = db.Column(db.Boolean, default=False)
     date = db.Column(db.DateTime, default=datetime.utcnow)
+    author = db.relationship('User', foreign_keys=[from_user_id], backref='notifications')
 
     def __init__(self, user_id, from_user_id, type, message, post_id=None, discuss_id=None):
         self.user_id = user_id
@@ -203,23 +209,30 @@ class Posts(db.Model):  # Посты
     text = db.Column(db.Text)
     rating = db.Column(db.Integer, default=0)
     views = db.Column(db.Integer, default=0)
+    deny_reason = db.Column(db.String, nullable=True)
     status = db.Column(db.Integer, default='on_moderating')
-    type = db.Column(db.JSON, default=[])
-    image_name = db.Column(db.String)
+    categories = db.Column(db.JSON, default=[])
+    type = db.Column(db.String)
+    thumbnail = db.Column(db.String, nullable=True)
+    images_names = db.Column(db.JSON, default=[])
+    video_link = db.Column(db.String, nullable=True)
     date = db.Column(db.DateTime, default=datetime.utcnow)
     is_news = db.Column(db.Boolean, default=False)
     official = db.Column(db.Boolean, default=False)
+    file = db.Column(db.String, nullable=True)
 
-    def __init__(self, id_author, title, text, views, status, type, image_name, official=None, is_news=None):
+    def __init__(self, id_author, title, text, views, status, type, images_names, is_news, video_link, thumbnail, file):
         self.id_author = id_author
         self.title = title
         self.text = text
         self.views = views
         self.status = status
         self.type = type
-        self.image_name = image_name
+        self.images_name = images_names
+        self.thumbnail = thumbnail
+        self.video_link = video_link
         self.is_news = is_news or False
-        self.official = official or False
+        self.file = file
 
 
 class Discuss(db.Model):  # Посты
@@ -229,6 +242,7 @@ class Discuss(db.Model):  # Посты
     text = db.Column(db.Text)
     rating = db.Column(db.Integer, default=0)
     views = db.Column(db.Integer, default=0)
+    deny_reason = db.Column(db.String, nullable=True)
     status = db.Column(db.Integer, default='on_moderating')
     categories = db.Column(db.JSON, default=[])
     date = db.Column(db.DateTime, default=datetime.utcnow)
@@ -241,10 +255,32 @@ class Discuss(db.Model):  # Посты
         self.status = status
         self.categories = categories
 
+class Clans(db.Model):  # Кланы
+    id = db.Column(db.Integer, primary_key=True)
+    id_author = db.Column(db.Integer)
+    name = db.Column(db.String)
+    members = db.Column(db.JSON, nullable=False, default=[])
+    description = db.Column(db.Text)
+    rating = db.Column(db.Integer, default=0)
+    views = db.Column(db.Integer, default=0)
+    categories = db.Column(db.JSON, default=[])
+    date = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def __init__(self, id_author, name, views, description, categories):
+        self.id_author = id_author
+        self.name = name
+        self.description = description
+        self.views = views
+        self.categories = categories
 
 # Для проверки файлов
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}  # Расширения файлов
+ALLOWED_EXTENSIONS_IMAGES = {'png', 'jpg', 'jpeg', 'gif', 'webp'}  # Расширения файлов
+ALLOWED_EXTENSIONS_ARCHIVES = {'zip', 'rar', '7z'}
 MAX_FILE_SIZE = 16 * 1024 * 1024  # Размер файлов 16MB
+
+def allowed_file(filename, allowed_set):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in allowed_set
 
 
 def time_ago(date):
@@ -271,10 +307,71 @@ def time_ago(date):
 def generate_code():
     return ''.join([str(random.randint(0, 9)) for _ in range(6)])
 
+def file_upload(file, allowed_set):
+    if not file or not file.filename:
+        return None, 'Файл не выбран'
 
-def allowed_file(filename):
-    return '.' in filename and \
-        filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+    if not allowed_file(file.filename, allowed_set):
+        extensions_str = ", ".join(sorted(allowed_set))
+        return None, f"Недопустимый формат файла! Разрешены: {extensions_str}"
+
+    file.seek(0, 2)  # Перемещаемся в конец файла
+    file_size = file.tell()
+    file.seek(0)  # Возвращаемся в начало
+
+    if file_size > MAX_FILE_SIZE:
+        return None, f"Файл слишком большой! Максимум {MAX_FILE_SIZE // 1024 // 1024}MB"
+
+    filename = secure_filename(file.filename)
+    file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+
+    # Проверка на дубликаты имен
+    if os.path.exists(file_path):
+        name, ext = os.path.splitext(filename)
+        counter = 1
+        while os.path.exists(file_path):
+            filename = f"{name}_{counter}{ext}"
+            file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            counter += 1
+    
+    file.save(file_path)
+    return filename, None
+
+def multiple_file_upload(files):
+    import os
+    uploaded_files=[]
+    errors=[]
+
+    for file in files:
+        if not file or not file.filename:
+            continue
+        
+        if not allowed_file(file.filename, ALLOWED_EXTENSIONS_IMAGES):
+            errors.append(f"{file.filename}: Недопустимый формат файла!")
+            continue
+        
+        file.seek(0, 2)
+        file_size = file.tell()
+        file.seek(0)
+
+        if file_size > MAX_FILE_SIZE:
+            errors.append(f"{file.filename}: Слишком большой файл!")
+            continue
+        filename = secure_filename(file.filename)
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+
+        if os.path.exists(file_path):
+            name, ext = os.path.splitext(filename)
+            counter = 1
+            while os.path.exists(file_path):
+                filename = f"{name}_{counter}{ext}"
+                file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                counter += 1
+        
+        file.save(file_path)
+        uploaded_files.append(filename)
+
+    return uploaded_files, errors
 
 
 @app.route('/notifications', methods=['POST', 'GET'])
@@ -283,8 +380,6 @@ def notifications():
     id = user.id
     notifications = Notification.query.filter_by(user_id=id).limit(3).all()
     if notifications:
-        for notification in notifications:
-            notification.author = notification.from_user_id
         return render_template('notifications.html', notifications=notifications)
     return render_template('notifications.html')
 
@@ -388,8 +483,7 @@ def send_email(verifyType):
                 body=f'''Привет, {username}.
         Вы регистрируетесь на Nexus MC!
         Подтвердите свою Электронную почту введя код снизу в поле ввода.
-        {code}'''
-            )  # Шаблон для Email
+        {code}''')  # Шаблон для Email
 
         mail.send(msg)  # Отправление Email
 
@@ -440,7 +534,7 @@ def index():
         for post in posts:
             comment = Comments.query.filter_by(id_post=post.id).all()
             post.author = User.query.get(post.id_author)
-            comments_len = len(comment)
+            post.comments_len = len(comment)
 
             if current_user.is_authenticated:
                 like = Likes.query.filter_by(
@@ -448,8 +542,25 @@ def index():
                 post.liked = like is not None
             else:
                 post.liked = False
-    return render_template("index.html", posts=posts, comments_len=comments_len)
+    return render_template("index.html", posts=posts)
 
+@app.route('/news')
+def news():
+    posts = Posts.query.order_by(Posts.views.desc()).all()
+    comments_len = 0
+    if posts:
+        for post in posts:
+            comment = Comments.query.filter_by(id_post=post.id).all()
+            post.author = User.query.get(post.id_author)
+            post.comments_len = len(comment)
+
+            if current_user.is_authenticated:
+                like = Likes.query.filter_by(
+                    id_author=current_user.id, id_post=post.id).first()
+                post.liked = like is not None
+            else:
+                post.liked = False
+    return render_template("news_nexus.html", posts=posts)
 
 @app.route('/moderate/<moderateType>')
 def moderate(moderateType):
@@ -606,8 +717,16 @@ def user(id):
 
     avatar = request.files.get('avatar')
     user = User.query.filter_by(id=id).first()
+    if user.friends:
+        if current_user.id in user.friends:
+            user.is_friend = True
+        else: 
+            user.is_friend = False
+    else:
+        pass
     status = "Пользователь"
     if user:
+        friends_users = User.query.filter(User.id.in_(user.friends)).all()
         if user.is_moderator:
             status = "Модератор"
         elif user.is_checked:
@@ -626,7 +745,26 @@ def user(id):
             post.author = User.query.get(post.id_author)
             comments_len = len(comment)
 
-    return render_template("account.html", user=user, status=status, posts=posts, comments_len=comments_len)
+    return render_template("account.html", user=user, status=status, posts=posts, comments_len=comments_len, friends_users=friends_users)
+
+@app.route('/add_friend/<int:id>', methods=['GET', 'POST'])
+def add_friend(id):
+    user = User.query.get(id)
+
+    user_friends = list(user.friends) if user.friends else []
+    current_user_friends = list(current_user.friends) if current_user.friends else []
+
+    if current_user.id not in user_friends:
+        user_friends.append(current_user.id)
+    
+    if user.id not in current_user_friends:
+        current_user_friends.append(current_user.id)
+    
+    user.friends = user_friends
+    current_user.friends = current_user_friends
+
+    db.session.commit()
+    return redirect(url_for('user', id=id))
 
 
 @app.route('/update_user', methods=['GET', 'POST'])
@@ -659,7 +797,7 @@ def update_user():
 
         if avatar and avatar.filename:
 
-            if not allowed_file(avatar.filename):
+            if not allowed_file(avatar.filename, ALLOWED_EXTENSIONS_IMAGES):
                 flash(
                     "Недопустимый формат файла! Разрешены: gif, png, jpg, jpeg", 'danger')
                 return redirect(url_for('user', id=id))
@@ -774,68 +912,124 @@ def forum():
 
 @app.route('/add_post/<post_type>', methods=['GET', 'POST'])
 def add_post(post_type):
-    if current_user.is_authenticated:
-        if request.method == 'POST':
-            file = request.files.get('image')
-            title = request.form.get('title')
-            text = request.form.get('text')
-            id_author = current_user.id
-            views = 0
-            true_types = ['article', 'server_java',
-                          'server_bedrock', 'texture_pack']
-            if not post_type in true_types:
-                flash("Недопустимый тип поста.", 'danger')
-                return redirect(url_for('index'))
-
-            if title == '' or text == '':
-                flash("Недопустимый запрос.", 'danger')
-                return redirect(url_for('add_post'))
-
-            else:
-                if current_user.is_banned:
-                    flash('Вы забанены!', 'success')
-                    redirect(url_for('index'))
-                else:
-                    try:
-                        image_data = None
-                        if file and file.filename != '':
-
-                            if not allowed_file(file.filename):
-                                flash(
-                                    "Недопустимый формат файла! Разрешены: gif, png, jpg, jpeg", 'danger')
-                                return redirect(url_for('add_post'))
-
-                            file_size = file.tell()
-
-                            if file_size > MAX_FILE_SIZE:
-                                flash(
-                                    f"Файл слишком большой! Максимум {MAX_FILE_SIZE // 1024 // 1024}MB", 'danger')
-
-                            filename = secure_filename(file.filename)
-                            file.save(os.path.join(
-                                app.config['UPLOAD_FOLDER'], filename))
-                            flash("Картинка добавлена!", "success")
-                            print("Файл загружен!")
-
-                        else:
-                            print("Файл не загружен.")
-                            image_data = None
-
-                        db.session.add(Posts(id_author=id_author, title=title, text=text,
-                                       views=views, status='on_moderating', type=post_type, image_name=file.filename))
-                        db.session.commit()
-                        flash("Пост успешно добавлен!", 'success')
-                        return redirect(url_for('index'))
-
-                    except Exception as e:
-                        print(f"Не удалось добавить пост! Ошибка: {e}")
-                        db.session.rollback()
-
-        return render_template("add_post.html", post_type=post_type)
-
-    else:
+    if not current_user.is_authenticated:
         flash("Войдите в аккаунт!", 'danger')
         return redirect(url_for('login'))
+    if not current_user.is_authenticated:
+        flash("Войдите в аккаунт!", 'danger')
+        return redirect(url_for('login'))
+        
+    if current_user.is_banned:
+        flash('Вы забанены!', 'danger')
+        return redirect(url_for('index'))
+
+    true_types = ['article', 'server_java', 'server_bedrock', 'texture_pack', 'news', 'mod']
+
+    if post_type not in true_types:
+        flash("Недопустимый тип поста.", 'danger')
+        return redirect(url_for('index'))
+
+    if request.method == 'POST':
+        thumbnail = request.files.get('thumbnail')
+        title = request.form.get('title')
+        text = request.form.get('text')
+        categories = request.form.get('categories')
+        file = request.files.get('file')
+        images = request.files.getlist('images[]')
+        video_link = request.form.get('video_link')
+        id_author = current_user.id
+        is_news = True
+        views = 0
+
+        images_names = []
+        thumbnail_filename = None
+        file_filename = None
+
+        if not title or not text:
+            flash("Недопустимый запрос.", 'danger')
+            return redirect(url_for('edit', editType=editType, id=id))
+
+        if current_user.is_banned:
+            flash('Вы забанены!', 'success')
+            return redirect(url_for('index'))
+        
+        uploaded_files, errors = multiple_file_upload(images)
+        if errors:
+            for error in errors:
+                flash(error, 'danger')
+                print(f"Ошибка: {error}")
+
+        images_names = uploaded_files
+
+        if uploaded_files:
+            flash(f"Загружено {len(uploaded_files)}", 'success')
+            print(f"Загружены: {', '.join(uploaded_files)}")
+        
+        if thumbnail and thumbnail.filename:
+            filename, error = file_upload(thumbnail, ALLOWED_EXTENSIONS_IMAGES)
+            if error:
+                flash(error, 'danger')
+                return redirect(url_for('add_post', post_type=post_type))
+            thumbnail_filename = filename
+            flash("Картинка добавлена!", "success")
+
+        if file and file.filename:
+            filename, error = file_upload(file, ALLOWED_EXTENSIONS_ARCHIVES)
+            if error:
+                flash(error, 'danger')
+                return redirect(url_for('add_post', post_type=post_type))
+            file_filename = filename
+            flash("Файл добавлен!", "success")
+        print(file_filename)
+        try:
+            from sqlalchemy.orm.attributes import flag_modified
+            import json
+
+
+            new_post = Posts(
+                id_author=id_author,
+                title=title,
+                text=text,
+                views=views,
+                status='on_moderating',
+                type=post_type,
+                thumbnail=thumbnail_filename,
+                video_link=video_link,
+                is_news=is_news,
+                images_names=[],
+                file=file_filename
+            )
+
+            new_post.images_names = images_names
+            flag_modified(new_post, 'images_names')
+
+            db.session.add(new_post)
+            db.session.commit()
+            
+            flash("Пост успешно добавлен!", 'success')
+            return redirect(url_for('index'))
+
+        except Exception as e:
+            print(f"Ошибка: {e}")
+            db.session.rollback()
+            flash(f"Ошибка: {str(e)}", 'danger')
+            return redirect(url_for('add_post', post_type=post_type))
+
+    return render_template("add_post.html", post_type=post_type)
+
+import re
+
+@app.template_filter('youtube_embed')
+def youtube_embed_filter(url):
+    if not url:
+        return ''
+    # Регулярное выражение для поиска ID видео в разных типах ссылок YouTube
+    reg = r'(https?://)?(www\.)?(youtube\.com/watch\?v=|youtu\.be/|youtube\.com/embed/)([^?&\s]+)'
+    match = re.search(reg, url)
+    if match:
+        video_id = match.group(4)
+        return f"https://www.youtube.com/embed/{video_id}"
+    return url
 
 
 @app.route('/accept/<contentType>/<int:id>', methods=['GET', 'POST'])
@@ -845,7 +1039,7 @@ def accept(contentType, id):
         post.status = 'moderated'
         db.session.commit()
         new_notice = Notification(user_id=post.id_author, from_user_id=current_user.id,
-                                  post_id=post.id, type="ваш пост был принят!", message="ваш пост был принят!")
+                                  post_id=post.id, type="post_accepted", message="Ваш пост был принят!")
         db.session.add(new_notice)
         db.session.commit()
         flash('Пост успешно одобрен!', 'success')
@@ -855,7 +1049,7 @@ def accept(contentType, id):
         discuss.status = 'moderated'
         db.session.commit()
         new_notice = Notification(user_id=discuss.id_author, from_user_id=current_user.id,
-                                  discuss_id=discuss.id, type="accepted", message="ваша дискуссия была принята!")
+                                  discuss_id=discuss.id, type="discuss_accepted", message="Ваша дискуссия была принята!")
         db.session.add(new_notice)
         db.session.commit()
         flash('Дискуссия успешно одобрена!', 'success')
@@ -870,10 +1064,12 @@ def accept(contentType, id):
 def deny(contentType, id):
     if contentType == 'post':
         post = Posts.query.filter_by(id=id).first()
+        deny_reason = 'Пост не подходит под наши критерии.'
+        post.deny_reason = deny_reason
         post.status = 'denied'
         db.session.commit()
         new_notice = Notification(user_id=post.id_author, from_user_id=current_user.id,
-                                  post_id=post.id, type="denied", message="В  аш пост был отклонен.")
+                                  post_id=post.id, type="discuss_denied", message="Ваш пост был отклонен.")
         db.session.add(new_notice)
         db.session.commit()
         flash('Пост успешно отклонен.', 'success')
@@ -881,9 +1077,11 @@ def deny(contentType, id):
     elif contentType == 'discuss':
         discuss = Discuss.query.filter_by(id=id).first()
         discuss.status = 'denied'
+        deny_reason = 'Дискуссия не подходит под наши критерии.'
+        discuss.deny_reason = deny_reason
         db.session.commit()
         new_notice = Notification(user_id=discuss.id_author, from_user_id=current_user.id,
-                                  discuss_id=discuss.id, type="denied", message="Ваша дискуссия была отклонена.")
+                                  discuss_id=discuss.id, type="post_denied", message="Ваша дискуссия была отклонена.")
         db.session.add(new_notice)
         db.session.commit()
         flash('Дискуссия успешно отклонена.', 'success')
@@ -918,7 +1116,7 @@ def add_discuss():
                         db.session.add(Discuss(
                             id_author=id_author, title=title, text=text, views=views, status='on_moderating', categories=categories))
                         db.session.commit()
-                        flash("Дискуссия успешно добавлена!", 'success')
+                        flash("Дискуссия успешно добавлена! Ждите одобрения модерацией.", 'success')
                         return redirect(url_for('forum'))
 
                     except Exception as e:
@@ -956,11 +1154,7 @@ def discuss(id):
             user_id=viewer_id
         ).first()
 
-        liked = Likes.query.filter_by(
-            id_author=current_user.id,
-            id_discuss=id
-        ).first() is not None
-        disliked = Dislikes.query.filter_by(
+        discuss.liked = Likes.query.filter_by(
             id_author=current_user.id,
             id_discuss=id
         ).first() is not None
@@ -982,7 +1176,7 @@ def discuss(id):
         discuss.views += 1
         db.session.commit()
 
-    return render_template("discuss.html", discuss=discuss, liked=liked, disliked=disliked, user_a=user_a, comments=comments)
+    return render_template("discuss.html", discuss=discuss, user_a=user_a, comments=comments)
 
 
 @app.route('/post/<int:id>', methods=['GET', 'POST'])
@@ -1036,38 +1230,57 @@ def post(id):
     return render_template("post.html", post=post, liked=liked, disliked=disliked, user_a=user_a, comments=comments)
 
 
-@app.route('/delete_post/<int:id>', methods=['GET', 'POST'])
-def delete_post(id):
+@app.route('/delete/<contentType>/<int:id>', methods=['GET', 'POST'])
+def delete(contentType, id):
     if request.method == 'POST':
-        word = 'Удалить'
-        word_input = request.form .get('word')
-        if word_input == word:
-            post = db.session.get(Posts, id)
-            user = current_user
-            if not post:
-                return redirect(url_for('forum'))
+        if contentType == 'post':
+            word = 'Удалить'
+            word_input = request.form.get('word')
+            if word_input == word:
+                post = db.session.get(Posts, id)
+                if not post:
+                    return redirect(url_for('forum'))
 
-            if current_user.username == "Whyiok":
+                if current_user.id != post.id_author and not current_user.is_moderator:
+                    flash("Вы не можете удалять чужие посты!", 'danger')
+                    return redirect(url_for('index'))
+
+                # если есть таблица лайков
+                Likes.query.filter_by(id_post=id).delete()
+                # если есть таблица комментариев
+                Comments.query.filter_by(id_post=id).delete()
+
                 db.session.delete(post)
                 db.session.commit()
-                flash("Удалено!", 'danger')
+                flash('Пост успешно удален.', 'success')
+                return redirect(url_for('index'))
+            else:
+                flash('Неверное слово!', 'warning')
+                return redirect(url_for('post', id=id))
+        elif contentType == 'discuss':
+            word = 'Удалить'
+            word_input = request.form.get('word')
+            if word_input == word:
+                discuss = db.session.get(Discuss, id)
+                if not discuss:
+                    return redirect(url_for('forum'))
+
+                if current_user.id != discuss.id_author and not current_user.is_moderator:
+                    flash("Вы не можете удалять чужие дискуссии!", 'danger')
+                    return redirect(url_for('forum'))
+
+                # если есть таблица лайков
+                Likes.query.filter_by(id_discuss=id).delete()
+                # если есть таблица комментариев
+                Comments.query.filter_by(id_discuss=id).delete()
+
+                db.session.delete(discuss)
+                db.session.commit()
+                flash('Дискуссия успешно удалена.', 'success')
                 return redirect(url_for('forum'))
-
-            if user.id != post.id_author:
-                flash("Вы не можете удалять чужие посты!", 'danger')
-                return redirect(url_for('forum'))
-
-            # если есть таблица лайков
-            Likes.query.filter_by(id_post=id).delete()
-            # если есть таблица комментариев
-            Comments.query.filter_by(id_post=id).delete()
-
-            db.session.delete(post)
-            db.session.commit()
-            return redirect(url_for('forum'))
-        else:
-            flash('Неверное слово!', 'warning')
-            return redirect(url_for('post', id=id))
+            else:
+                flash('Неверное слово!', 'warning')
+                return redirect(url_for('discuss', id=id))
 
 
 @app.route('/like/<contentType>/<int:id>', methods=['GET', 'POST'])
@@ -1088,7 +1301,7 @@ def like(contentType, id):
             else:
                 new_like = Likes(id_author=current_user.id, id_discuss=id)
                 new_notice = Notification(user_id=discuss.id_author, from_user_id=current_user.id,
-                                          discuss_id=discuss.id, type="liked", message="понравилась ваша ветка!")
+                                          discuss_id=discuss.id, type="discuss_liked", message="понравилась ваша ветка!")
                 discuss.rating += 1
                 db.session.add(new_like)
                 db.session.add(new_notice)
@@ -1112,7 +1325,7 @@ def like(contentType, id):
             else:
                 new_like = Likes(id_author=current_user.id, id_post=id)
                 new_notice = Notification(user_id=post.id_author, from_user_id=current_user.id,
-                                          post_id=post.id, type="liked", message="понравился ваш пост!")
+                                          post_id=post.id, type="post_liked", message="понравился ваш пост!")
                 post.rating += 1
                 db.session.add(new_like)
                 db.session.add(new_notice)
@@ -1130,33 +1343,33 @@ def like(contentType, id):
         return redirect('/login')
 
 
-@app.route('/report/<int:id>', methods=['GET', 'POST'])
-def report(id):
+@app.route('/report/<contentType>/<int:id>', methods=['GET', 'POST'])
+def report(contentType, id):
     if current_user.is_authenticated:
         post = db.session.get(Posts, id)
         discuss = db.session.get(Discuss, id)
         moderators = User.query.filter_by(is_moderator=True).all()
         print(f"{len(moderators)} модераторов найдено")
-        if post:
+        if contentType == 'post':
             for moderator in moderators:
                 new_notice = Notification(user_id=moderator.id, from_user_id=current_user.id,
-                                          post_id=post.id, message="отправил жалобу на пост!", type="report")
+                                          post_id=post.id, message="отправил жалобу на пост!", type="post_report")
                 db.session.add(new_notice)
             db.session.commit()
             flash('Спасибо за помощь!', 'success')
             return redirect(url_for('forum'))
 
-        elif discuss:
+        elif contentType == 'discuss':
             for moderator in moderators:
                 new_notice = Notification(user_id=moderator.id, from_user_id=current_user.id,
-                                          discuss_id=discuss.id, message="отправил жалобу на ветку!", type="report")
+                                          discuss_id=discuss.id, message="отправил жалобу на ветку!", type="discuss_report")
                 db.session.add(new_notice)
             db.session.commit()
             flash('Спасибо за помощь!', 'success')
             return redirect(url_for('forum'))
 
         else:
-            flash('Нету такого поста или дискуссии!', 'danger')
+            flash('Неизвестный тип жалобы!', 'danger')
             return redirect(url_for('forum'))
 
     else:
@@ -1166,70 +1379,85 @@ def report(id):
 
 @app.route('/edit/<editType>/<int:id>', methods=['GET', 'POST'])
 def edit(editType, id):
-    if current_user.is_authenticated:
-        if request.method == 'POST':
-            if editType == 'post':
-                title = request.form.get('title')
-                text = request.form.get('text')
-                file = request.files.get('image')
-                post = Posts.query.get(id)
-                categories = request.form.getlist('categories')
-
-            elif editType == 'discuss':
-                title = request.form.get('title')
-                text = request.form.get('text')
-                discuss = Discuss.query.get(id)
-                categories = request.form.getlist('categories')
-
-            if title == '' or text == '':
-                flash("Недопустимый запрос.", 'danger')
-                return redirect(url_for('edit', editType=editType, id=id))
-            else:
-                try:
-                    if file and file.filename != '':
-                        if not allowed_file(file.filename):
-                            flash(
-                                "Недопустимый формат файла! Разрешены: gif, png, jpg, jpeg", 'danger')
-                            return redirect(url_for(f'edit_post{id}'))
-                        file.seek(0, os.SEEK_END)
-                        file_size = file.tell()
-                        file.seek(0)
-
-                        if file_size > MAX_FILE_SIZE:
-                            flash(
-                                f"Файл слишком большой! Максимум {MAX_FILE_SIZE // 1024 // 1024}MB", 'danger')
-                        filename = secure_filename(file.filename)
-                        file.save(os.path.join(
-                            app.config['UPLOAD_FOLDER'], filename))
-                        flash("Картинка добавлена!", "success")
-                        print("Файл загружен!")
-                    else:
-                        print("Файл не загружен.")
-
-                    if editType == 'post':
-                        post = Posts.query.filter_by(id=id).first()
-                        post.title = title
-                        post.text = text
-                        post.image_name = file.filename
-                        post.categories = categories
-                        db.session.commit()
-                        flash("Пост успешно изменен! Ожидайте одобрения модерацией.", 'success')
-                        return redirect(url_for('index'))
-                    elif editType == 'discuss':
-                        discuss = Discuss.query.filter_by(id=id).first()
-                        discuss.title = title
-                        discuss.text = text
-                        discuss.categories = categories
-                        db.session.commit()
-                        flash("Дискуссия успешно изменена! Ожидайте одобрения модерацией.", 'success')
-                        return redirect(url_for('index'))
-                except Exception as e:
-                    print(f"Не удалось изменить пост или дискуссю! Ошибка: {e}")
-                    db.session.rollback()
-        return render_template("edit.html", post=post, discuss=discuss, editType=editType, id=id)
-    else:
+    if not current_user.is_authenticated:
         flash("Войдите в аккаунт!", 'danger')
         return redirect(url_for('login'))
+    post = None
+    discuss = None
+    
+    if editType == 'post':
+        post = Posts.query.get(id)
+        if not post:
+            flash('Пост не найден!', 'danger')
+            return redirect(url_for('index'))
+        if post.id_author != current_user.id and not current_user.is_moderator:
+            flash("У вас нет прав для редактирования этого поста!", 'danger')
+            return redirect(url_for('index'))
+
+    elif editType == 'discuss':
+        discuss = Discuss.query.get(id)
+        if not discuss:
+            flash('Дискуссия не найдена!', 'danger')
+            return redirect(url_for('forum'))
+        if discuss.id_author != current_user.id and not current_user.is_moderator:
+            flash("У вас нет прав для редактирования этой дискуссии!", 'danger')
+            return redirect(url_for('forum'))
+    else:
+        flash('Недопустимый вид редактирования!', 'danger')
+        return redirect(url_for('index'))
+
+    if request.method == 'POST':
+        if editType == 'post':
+            title = request.form.get('title')
+            text = request.form.get('text')
+            thumbnail = request.files.get('thumbnail')
+            post = Posts.query.get(id)
+            categories = request.form.getlist('categories')
+
+        elif editType == 'discuss':
+            title = request.form.get('title')
+            text = request.form.get('text')
+            discuss = Discuss.query.get(id)
+            categories = request.form.getlist('categories')
+
+        if not title or not text:
+            flash("Недопустимый запрос.", 'danger')
+            return redirect(url_for('edit', editType=editType, id=id))
+        else:
+            try:
+                if editType == 'post':
+                    thumbnail_filename = None
+                    if thumbnail and thumbnail.filename:
+                        filename, error = file_upload(thumbnail, ALLOWED_EXTENSIONS_IMAGES)
+                        if error:
+                            flash(error, 'danger')
+                            return redirect(url_for('add_post', post_type=post_type))
+                        thumbnail_filename = filename
+                        flash("Картинка добавлена!", "success")
+                    post = Posts.query.filter_by(id=id).first()
+                    discuss = None
+                    post.status = 'on_moderating'
+                    post.title = title
+                    post.text = text
+                    post.thumbnail = thumbnail_filename
+                    post.categories = categories
+                    db.session.commit()
+                    flash("Пост успешно изменен! Ожидайте одобрения модерацией.", 'success')
+                    return redirect(url_for('index'))
+                elif editType == 'discuss':
+                    discuss = Discuss.query.filter_by(id=id).first()
+                    discuss.status = 'on_moderating'
+                    post = None
+                    discuss.title = title
+                    discuss.text = text
+                    discuss.categories = categories
+                    db.session.commit()
+                    flash("Дискуссия успешно изменена! Ожидайте одобрения модерацией.", 'success')
+                    return redirect(url_for('index'))
+            except Exception as e:
+                print(f"Не удалось изменить пост или дискуссю! Ошибка: {e}")
+                db.session.rollback()
+    return render_template("edit.html", post=post, discuss=discuss, editType=editType, id=id)
 
 
 @app.route('/ban_user/<int:id>', methods=['GET', 'POST'])

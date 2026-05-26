@@ -42,12 +42,12 @@
       <!-- Контент -->
       <div style="padding: 15px; flex: 1; display: flex; flex-direction: column;">
         <a style="color: white; margin: 0 0 0 0;" class="fw-bold text-decoration-none fs-5"
-          href="/post/{{ notification.post_id }}">{{ notification.author.username }}{{ notification.message }}</a>
+          href="/post/{{ notification.post_id }}">{% if notification.type != 'accepted' and notification.type != 'denied' %} {{ notification.author.username }} {% endif %} {{ notification.message }}</a>
 
         <div class="d-flex gap-3 mt-0">
           <p class="text-secondary mb-0" onclick="playSound()">{{ notification.date }}</p>
           <a class="mb-0 link-body-emphasis" onclick="playSound()" href="/user/{{ notification.author.id }}">
-            <img src="/static/avatars/{{ notice_author.avatar }}" style="border-radius: 50%; height: 20px; margin-bottom: 0;">
+            <img src="/static/avatars/{{ notification.author.avatar }}" style="border-radius: 50%; height: 20px; margin-bottom: 0;">
             {{ notification.author.username }}</a>
         </div>
       </div>

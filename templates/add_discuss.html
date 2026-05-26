@@ -34,19 +34,20 @@
         align-items: center;
         padding-top: 15px;
     ">
+        <h1 class="font">Добавление дискуссии</h1>
         <form method="POST">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="m-3 w-25 col-auto">
                 <label class="form-label btn-glass btn-glass-primary font"
                        style="color: white; font-weight: 500; width: 9.7rem; padding-left: auto;">Заголовок</label>
-                <input type="text" name="title" class="btn-glass btn-glass-outline" style="width: 500px;" maxlength="80"
+                <input type="text" name="title" class="btn-glass btn-glass-outline font" style="width: 500px;" maxlength="80"
                        required>
             </div>
 
             <div class="m-3 w-25 col-auto">
                 <label class="form-label btn-glass btn-glass-primary font"
                        style="color: white; font-weight: 500; width: 150px; padding-left: 50px;">Текст</label>
-                <input type="text" name="text" class="btn-glass btn-glass-outline"
+                <input type="text" name="text" class="btn-glass btn-glass-outline font"
                        style="width: 500px;" required>
             </div>
 

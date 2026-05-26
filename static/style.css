@@ -256,8 +256,8 @@ hr {
 }
 
 .br-top {
-    border: transparent;
-    border-radius: 15px 15px 0 0;
+    border: transparent !important;
+    border-radius: 15px 15px 0 0 !important;
 }
 
 .br-bottom {
@@ -308,6 +308,7 @@ li {
     opacity: 0.6;
     transition: 0.3s all;
 }
+
 
 .like-button:hover .like-icon {
     opacity: 1;

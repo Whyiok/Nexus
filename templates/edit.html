@@ -39,18 +39,29 @@
                     {%elif post.type == 'server_bedrock'%}Изменение Bedrock сервера
                     {%elif post.type == 'texture_pack'%}Изменение текстур пака
                     {% elif editType == 'discuss' %}Изменение дискуссии{%endif%}</h1>
-        <form method="POST" enctype="multipart/form-data">
+        <form method="POST" enctype="multipart/form-data" action="{{ url_for('edit', editType=editType, id=id) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="m-3 w-25 col-auto">
                 <label class="form-label btn-glass btn-glass-primary font d-block text-center"
                        style="color: white; font-weight: 500; width: 9.7rem; width: 220px;">Новый заголовок</label>
-                <input type="text" name="title" value="{{ post.title }}" class="btn-glass btn-glass-outline font" style="width: 500px;" maxlength="80"
+                <input type="text" name="title" value="{% if editType == 'post' %}{{ post.title }}{% elif editType == 'discuss' %}{{ discuss.title }}{% endif %}" class="btn-glass btn-glass-outline font" style="width: 500px;" maxlength="80"
                        required>
             </div>
             {% if editType == 'post' %}
             <div class="m-3 w-25 col-auto">
                 <label class="form-label btn-glass btn-glass-primary font d-block text-center"
-                       style="color: white; font-weight: 500; width: 220px;">Картинка</label>
+                       style="color: white; font-weight: 500; width: 220px;">Новая обложка</label>
+                <div class="file-input-wrapper" style="width: 300px;">
+                    <input type="file" name="thumbnail" accept="image/*" id="fileInput" style="display: none;">
+                    <label for="fileInput" class="btn-glass btn-glass-outline font"
+                           style="width: 100%; justify-content: center; cursor: pointer;">
+                        Выберите картинку
+                    </label>
+                </div>
+            </div>
+            <div class="m-3 w-25 col-auto">
+                <label class="form-label btn-glass btn-glass-primary font d-block text-center"
+                       style="color: white; font-weight: 500; width: 220px;">Новый файл</label><label class="text-secondary fs-7">*Выберите архив вашего рп или датапака</label>
                 <div class="file-input-wrapper" style="width: 300px;">
                     <input type="file" name="image" accept="image/*" id="fileInput" style="display: none;">
                     <label for="fileInput" class="btn-glass btn-glass-outline font"
@@ -59,11 +70,19 @@
                     </label>
                 </div>
             </div>
+            <div class="m-3 w-25 col-auto">
+                <label class="form-label btn-glass btn-glass-primary font d-block text-center"
+                       style="color: white; font-weight: 500; width: 220px;">Видео (Ссылка)</label>
+                <div class="file-input-wrapper" style="width: 300px;">
+                    <input type="text" name="text" value="{% if editType == 'post' %}{{ post.text }}{% elif editType == 'discuss' %}{{ discuss.text }}{% endif %}" class="btn-glass btn-glass-outline font"
+                       style="width: 500px;" required>
+                </div>
+            </div>
             {% endif %}
             <div class="m-3 w-25 col-auto">
                 <label class="form-label btn-glass btn-glass-primary font d-block text-center"
-                       style="color: white; font-weight: 500; width: 220px;">Новый текст</label>
-                <input type="text" name="text" value="{{ post.text }}" class="btn-glass btn-glass-outline font"
+                       style="color: white; font-weight: 500; width: 220px;">Новое описание</label>
+                <input type="text" name="text" value="{% if editType == 'post' %}{{ post.text }}{% elif editType == 'discuss' %}{{ discuss.text }}{% endif %}" class="btn-glass btn-glass-outline font"
                        style="width: 500px;" required>
             </div>
             <div class="dropdown my-2 btn-glass btn-glass-outline" style="height: 3rem; padding: auto;">

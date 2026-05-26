@@ -36,10 +36,10 @@
                         <div class="col-12 col-md-6 col-lg-4">
                             <div class="{% if post.type == 'exclusive' %}ex-post{% else %}post{% endif %}">
                                 <!-- Картинка -->
-                                {% if post.image_name %}
+                                {% if post.thumbnail %}
                                 <a href="/post/{{ post.id }}" class="text-decoration-none">
                                     <div style="width: 100%; height: 200px;">
-                                        <img src="{{ url_for('static', filename='uploads/' ~ post.image_name) }}"
+                                        <img src="{{ url_for('static', filename='uploads/' ~ post.thumbnail) }}"
                                             alt="Post image"
                                             style="width: 100%; height: 200px; object-fit: cover; object-position: center;">
                                     </div>
@@ -75,10 +75,10 @@
                                         href="/post/{{ post.id }}">{{
                                         post.title }}</a>
                                     <a style="font-family: 'Unbounded', sans-serif;" title="Тип поста"
-                                        class="fw-bold text-decoration-none fs-7 {% if post.type == 'exclusive' %}text-golden{% else %}text-secondary{% endif %} text-start">{%
+                                        class="fw-bold text-decoration-none fs-6 {% if post.type == 'exclusive' %}text-golden{% else %}text-secondary{% endif %} text-start">{%
                                         if post.type == 'article' %}Статья{% elif post.type == 'server_java' %}Java
                                         сервер{% elif post.type == 'server_bedrock' %}Bedrock сервер{% elif post.type ==
-                                        'texture_pack' %}Текстур пак{% elif post.type == 'exclusive' %}Эксклюзивный{%
+                                        'texture_pack' %}Текстур пак{% elif post.type == 'exclusive' %}Эксклюзивный{% elif post.type == 'mod' %}Модификация{%
                                         else %}Неизвестный тип поста{% endif %}</a>
                                     <div class="d-flex">
                                         <a class="m-0 link-custom text-secondary font-small font-mine text-start"
@@ -119,8 +119,8 @@
                         {% endif %}
                         {% endfor %}
                         {% else %}
-                        <div class="nav col-auto mb-2 justify-content-center mb-md-0 p-2" style="margin-top: 80px;">
-                            <p class="display-5 fw-bold"
+                        <div class="nav col-auto justify-content-center">
+                            <p class="display-5 fw-bold font"
                                 style="background: linear-gradient(45deg, #6f42c1, #a855f7, #d946ef); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-size: 4rem; user-select: none;">
                                 Все посты проверены!</p>
                         </div>
@@ -149,31 +149,6 @@
                                 </div>
 
                                 <div class="d-flex">
-
-                                    <!--Ответить/Лайк-->
-                                    {% if current_user.is_authenticated %}
-                                    <div class="d-flex align-items-center">
-                                        <form class="like-form" data-id="{{ discuss.id }}" data-type="discuss">
-                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                            <button type="submit" class="btn-unstyled button-custom px-2 like-button"
-                                                title="Нравится">
-                                                <img id="like-icon-{{ discuss.id }}" class="like-icon"
-                                                    src="/static/{% if discuss.liked %}like_filled.svg{% else %}like.svg{% endif %}">
-                                                <span class="mt-2 text-reset font-mine">Нравится</span>
-                                            </button>
-                                        </form>
-                                        <a class="btn-unstyled text-secondary text-decoration-none button-custom px-2 font-mine reply-button"
-                                            href="/discuss/{{ discuss.id }}">
-                                            <img src="/static/reply.svg" class="reply-icon">
-                                            <span class="mt-2 text-reset font-mine">Ответить</span>
-                                        </a>
-                                        <a class="btn-unstyled text-secondary text-decoration-none button-custom px-2 font-mine report-button"
-                                            data-bs-toggle="modal" data-bs-target="#staticBackdrop">
-                                            <img src="/static/report.svg" class="report-icon">
-                                            <span class="mt-2 text-reset font-mine">Жалоба</span>
-                                        </a>
-                                    </div>
-                                    {% endif %}
                                     <form action="{{ url_for('accept', contentType='discuss', id=discuss.id) }}">
                                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                         <button type="submit" class="btn-unstyled button-custom like-button"
@@ -183,7 +158,7 @@
                                             <span class="mt-2 text-reset font-mine">Принять</span>
                                         </button>
                                     </form>
-                                    <form action="/deny/post/{{ discuss.id }}">
+                                    <form action="{{ url_for('deny', contentType='discuss', id=discuss.id) }}">
                                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                         <button type="submit" class="btn-unstyled button-custom font like-button"
                                             title="Отклонить">
@@ -197,10 +172,10 @@
                         {% endif %}
                         {% endfor %}
                         {% else %}
-                        <div class="nav col-auto mb-2 justify-content-center mb-md-0 p-2" style="margin-top: 80px;">
-                            <p class="display-5 fw-bold"
+                        <div class="nav col-auto justify-content-center">
+                            <p class="display-5 fw-bold text-center font"
                                 style="background: linear-gradient(45deg, #6f42c1, #a855f7, #d946ef); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-size: 4rem; user-select: none;">
-                                У нас пока нет веток :(</p>
+                                Все ветки проверены!</p>
                         </div>
                         {% endif %}
                     </div>

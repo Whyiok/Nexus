@@ -1,3 +1,10 @@
+function insertText(userId, userName) {
+    // Получаем input по ID
+    let input = document.getElementById('myInput');
+    // Вставляем текст
+    input.value = `@${userName}`;
+}
+
 function selectDiscuss() {
     history.pushState({ page: 'profile' }, '', '/moderate/discusses');
     const posts = document.getElementById('posts');

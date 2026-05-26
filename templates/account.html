@@ -69,14 +69,25 @@
                     <span class="font ms-2 text-secondary">{{ status }}{% if user.is_banned %} ЗАБАНЕН!{% endif
                         %}</span>
                 </div>
+                <div class="d-flex flex-row gap-2">
                     {% if current_user.id == user.id %}
-                <button
-                    class="btn-glass btn-glass-primary dropdown-toggle font d-flex align-items-center justify-content-center"
-                    type="button" data-bs-toggle="collapse" href="#userData">
-                    Изменить данные о себе
-                </button>
+                    <button
+                        class="btn-glass btn-glass-primary dropdown-toggle font d-flex align-items-center justify-content-center"
+                        type="button" data-bs-toggle="collapse" href="#userData">
+                        <img src="/static/edit_user.svg">
+                        Изменить данные о себе
+                    </button>
+                    {% endif %}
+                    <form method="POST" action="/add_friend/{{ user.id }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button class="btn-glass btn-glass-primary font d-flex align-items-center justify-content-center" type="submit">
+                        {% if not user.is_friend %}<img src="/static/add_friend.svg">
+                        Добавить в друзья {% else %}<img src="/static/del_friend.svg">Убрать из друзей{% endif %}
+                        </button>
+                    </form>
+                </div>
+                {% if current_user.id == user.id %}
                 <ul class="collapse mt-3 mx-auto" id="userData">
-                    
                     <div class="text-start mb-4 d-flex col mt-2">
                         <div class="d-flex align-items-center gap-3">
                             <form method="post" enctype="multipart/form-data" action="/update_user">
@@ -127,21 +138,23 @@
                         </div>
                         </form>
                     </div>
-                    {% endif %}
                 </ul>
+                {% endif %}
                 <p class="font mt-2">Зарегистрирован: {{ time_ago(user.date) }}</p>
                 <h3 class="mt-4 font">Посты пользователя {{ user.username }}:</h3>
+                <p>{% for friend in friends %}{{ friend.username }}{% endfor %}</p>
                 <div class="row g-3">
-                {% if posts|length > 0 %}
+                    {% if posts|length > 0 %}
                     {% for post in posts %}
                     {% if post.author.id == user.id %}
+                    {% if post.status == 'moderated' %}
                     <div class="col-12 col-md-6 col-lg-4">
                         <div class="{% if post.type == 'exclusive' %}ex-post{% else %}post{% endif %}">
                             <!-- Картинка -->
-                            {% if post.image_name %}
+                            {% if post.thumbnail %}
                             <a href="/post/{{ post.id }}" class="text-decoration-none">
                                 <div style="width: 100%; height: 200px;">
-                                    <img src="{{ url_for('static', filename='uploads/' ~ post.image_name) }}"
+                                    <img src="{{ url_for('static', filename='uploads/' ~ post.thumbnail) }}"
                                         alt="Post image"
                                         style="width: 100%; height: 200px; object-fit: cover; object-position: center;">
                                 </div>
@@ -215,14 +228,15 @@
                         </div>
                     </div>
                     {% endif %}
+                    {% endif %}
                     {% endfor %}
-                {% else %}
+                    {% else %}
                     <div class="nav col-auto mb-2 justify-content-center mb-md-0 p-2" style="margin-top: 80px;">
                         <p class="display-5 fw-bold"
                             style="background: linear-gradient(45deg, #6f42c1, #a855f7, #d946ef); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-size: 4rem; user-select: none;">
                             У пользователя {{ user.username }} пока что нет постов :(</p>
                     </div>
-                {% endif %}
+                    {% endif %}
                 </div>
             </div>
         </div>
