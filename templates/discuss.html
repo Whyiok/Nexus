@@ -1,0 +1,193 @@
+{% extends 'base.html' %}
+
+{% block title %}
+Дискуссия {{ discuss.title }}
+{% endblock %}
+
+{% block main %}
+<main style="min-height: 100vh; display: flex; align-items: center; padding: 100px 0;">
+    <div class="modal fade" id="reportBackdrop" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1"
+        aria-labelledby="staticBackdropLabel" aria-hidden="true" {% if show_modal %} data-bs-show="true" {% endif %}>
+        <div class="modal-dialog">
+            <div class="modal-content" style="border-radius: 15px; background: rgba(10, 10, 20, 0.75);">
+                <div class="modal-header">
+                    <h1 class="modal-title fs-5 font" id="staticBackdropLabel">Отправка жалобы</h1>
+                </div>
+                <form method="post" action="/report/discuss/{{ discuss.id }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="modal-body">
+                        <p class="font">Причина</p>
+                        <div style="margin-bottom: 20px;">
+                            <select class="form-select font-mine">
+                                <option selected value="indecent" class="font-mine">Неприличный пост</option>
+                                <option value="spam" class="font-mine">Спам или реклама</option>
+                                <option value="conf_info" class="font-mine">Конфиденциальная информация</option>
+                                <option value="offtopic" class="font-mine">Не по теме</option>
+                                <option value="agry" class="font-mine">Оскорбления</option>
+                                <option value="other" class="font-mine">Другое</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn-glass btn-glass-outline font" data-bs-dismiss="modal">
+                            Отменить
+                        </button>
+                        <button type="submit" class="btn-glass btn-glass-primary font">Отправить</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade" id="deleteBackdrop" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1"
+        aria-labelledby="staticBackdropLabel" aria-hidden="true" {% if show_modal %} data-bs-show="true" {% endif %}>
+        <div class="modal-dialog">
+            <div class="modal-content" style="border-radius: 15px; background: rgba(10, 10, 20, 0.75);">
+                <div class="modal-header">
+                    <h1 class="modal-title fs-5 font" id="staticBackdropLabel">Вы точно хотите удалить дискуссию?</h1>
+                </div>
+                <form method="post" action="/delete/discuss/{{ discuss.id }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="modal-body">
+                        <!-- Код подтверждения -->
+                        <p class="font">Введите слово "Удалить" для подтверждения</p>
+                        <div style="margin-bottom: 20px;" class="input-div">
+                            <img src="/static/delete.svg">
+                            <input autofocus type="text" placeholder="Введите слово" name="word" class="input font">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn-glass btn-glass-primary font" data-bs-dismiss="modal">
+                            Отменить
+                        </button>
+                        <button type="submit" class="btn-glass btn-glass-red font">Удалить</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="container-fluid">
+        <div class="row justify-content-center">
+            <div class="col-12 col-md-8 col-lg-6 col-xl-5 w-75">
+                <div
+                    style="background: rgba(10, 10, 20, 0.75); backdrop-filter: blur(15px); border: 2px solid rgba(111, 66, 193, 0.3); border-radius: 30px; padding: 40px; width: 100%;">
+                    <!-- Элементы в столбик -->
+                    <div style="display: flex; flex-direction: column; gap: 5px;">
+                        <a class="text-decoration-none fs-3 fw-bold font" style="color: inherit">{{ discuss.title }}</a>
+                        <a class="text-decoration-none fs-5 font text-secondary" style="color: inherit">{{ discuss.text }}</a>
+                        <a class="text-secondary my-2 text-decoration-none">Опубликовано:
+                            {{ discuss.date.strftime('%d.%m.%Y %H:%M') }}</a>
+                        {% if current_user.is_authenticated %}
+                        <div class="d-flex align-items-center">
+                            <form class="like-form" data-id="{{ discuss.id }}" data-type="discuss">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn-unstyled button-custom px-2 like-button"
+                                    title="Нравится">
+                                    <img id="like-icon-{{ discuss.id }}" class="like-icon"
+                                        src="/static/{% if discuss.liked %}like_filled.svg{% else %}like.svg{% endif %}">
+                                    <span class="mt-2 text-reset font-mine">Нравится</span>
+                                </button>
+                            </form>
+                            <a class="btn-unstyled text-secondary text-decoration-none button-custom px-2 font-mine report-button"
+                                data-bs-toggle="modal" data-bs-target="#reportBackdrop">
+                                <img src="/static/report.svg" class="report-icon">
+                                <span class="mt-2 text-reset font-mine">Жалоба</span>
+                            </a>
+                            {% if current_user.id == discuss.id_author or current_user.is_moderator %}
+                            <a class="btn-unstyled text-secondary text-decoration-none button-custom px-2 font-mine report-button"
+                                data-bs-toggle="modal" data-bs-target="#deleteBackdrop">
+                                <img src="/static/delete.svg" class="report-icon">
+                                <span class="mt-2 text-reset font-mine">Удалить</span>
+                            </a>
+                            <form method="get" action="/edit/discuss/{{ discuss.id }}">
+                                <button
+                                    class="btn-unstyled text-secondary text-decoration-none button-custom px-2 font-mine report-button"
+                                    type="submit">
+                                    <img src="/static/edit.svg" class="report-icon">
+                                    <span class="mt-2 text-reset font-mine">Изменить</span>
+                                </button>
+                            </form>
+                            {% endif %}
+                        </div>
+                        <hr class="my-3">
+                        <div>
+                            <a href="/user/{{ user_a.id }}" class="link-custom fs-5 font"><img style="
+                        width: 44px;
+                        height: 44px;
+                        border-radius: 50%;
+                        object-fit: cover;
+                        object-position: center;" src="/static/avatars/{{ user_a.avatar }}"> {{ user_a.username }}</a>
+                        </div>
+                        <hr class="my-3">
+                        <div>
+                            <form method="post" action="/comment/discuss/{{ discuss.id }}">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                                <label class="mb-2 font">Введите комментарий</label><span
+                                    class="text-secondary fst-italic font-mine" style="font-size: 0.8rem"> *Максимальная
+                                    Длина: 500</span>
+                                <input type="hidden" value="{{ discuss.id }}" name="discuss_id" />
+                                <input type="hidden" value="{{ current_user.id }}" name="author_id" />
+                                <div class="input-div">
+                                    <img src="/static/comment.svg">
+                                    <input id="myInput" class="input font" type="text" name="text"
+                                        placeholder="Введите свой комментарий..." size="50" maxlength="500" required>
+                                </div>
+                                <button type="submit" class="btn-glass btn-glass-primary mt-2 font">Отправить</button>
+                            </form>
+                        </div>
+                        {% else %}
+                        <div style="background-image: url(/static/img/background.png);
+                                    background-position: center;
+                                    background-size: 100%;
+                                    background-repeat: none;
+                                    border-radius: 15px;
+                                    padding: 15px;">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                            <label class="my-2 font">Хотите оставлять комментарии или ставить оценки?</label>
+                            <div class="d-flex gap-1">
+                                <a class="btn-glass btn-glass-primary font" href="/login">Вход</a>
+                                <a class="font btn-glass btn-glass-outline" href="/register">Регистрация</a>
+                            </div>
+                        </div>
+                        {% endif %}
+                        <div
+                            style="display: flex; flex-direction: column; background-color: rgba(10,10,20,0.9); border-radius: 15px; width: 100%; margin-bottom: 1rem; overflow: hidden;">
+                            {% for comment in comments %}
+                            <div class="comment">
+                                    <!-- Текст комментария -->
+                                    <div style="padding: 15px; flex: 1;">
+                                        <p style="margin:0; color: rgba(255,255,255,0.5);">
+                                            <a href="/user/{{ comment.author.id }}" style="color:#6f42c1;">
+                                                <img src="/static/avatars/{{ comment.author.avatar }}"
+                                                    style="border-radius: 50%; object-fit: cover; object-position: center;"
+                                                    height="20" width="20">
+                                                {{ comment.author.username }}</a>
+                                        </p>
+                                        <p style="margin:0; color:white;" class="comment-text">{{ comment.comment }}</p>
+                                    </div>
+
+                                    <hr style="margin:0; border-color: rgba(111,66,193,0.3);" />
+
+                                    <!-- Нижняя менюшка -->
+                                    <div
+                                        style="padding: 15px; display:flex; gap:15px; align-items:center; margin-top: auto;">
+                                        <a onclick="insertText({{ comment.author.id }}, '{{ comment.author.username }}')" style="color:#6f42c1; text-decoration:none; cursor: pointer;">Ответить</a>
+                                        <p style="margin:0; color: rgba(255,255,255,0.5); font-size:0.85rem;">{{ comment.date.strftime('%d.%m.%Y %H:%M') }}</p>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div> <!-- Закрываем flex-column div -->
+                </div> <!-- Закрываем основной div с фоном -->
+            </div> <!-- Закрываем col -->
+        </div>
+    </div>
+</main> <!-- Закрываем main -->
+<script>
+    {% if show_modal %}
+    document.addEventListener('DOMContentLoaded', function () {
+        var myModal = new bootstrap.Modal(document.getElementById('staticBackdrop'));
+        myModal.show();
+    });
+    {% endif %}
+</script>
+{% endblock %}
